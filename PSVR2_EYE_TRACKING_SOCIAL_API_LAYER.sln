@@ -1,0 +1,90 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34031.279
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psvr2_social_gazes", "openxr-api-layer\psvr2_social_gazes.vcxproj", "{48E7238D-B322-47D7-A1EF-970559C02CDA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6} = {3461493E-AA37-49DA-A26B-9622B98AF8D6}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Files", "Solution Files", "{A53ED6CB-95D3-4833-8A16-C6A588F16F6E}"
+	ProjectSection(SolutionItems) = preProject
+		.clang-format = .clang-format
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		LICENSE = LICENSE
+		README.md = README.md
+		version.info = version.info
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{BA775DE9-671E-4E3B-92AC-9828C2AAF490}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\Capture-ETL.bat = scripts\Capture-ETL.bat
+		scripts\Install-Layer.ps1 = scripts\Install-Layer.ps1
+		scripts\Install-Layer32.ps1 = scripts\Install-Layer32.ps1
+		scripts\Tracing.wprp = scripts\Tracing.wprp
+		scripts\Uninstall-Layer.ps1 = scripts\Uninstall-Layer.ps1
+		scripts\Uninstall-Layer32.ps1 = scripts\Uninstall-Layer32.ps1
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomSetup", "CustomSetup\CustomSetup.csproj", "{B6C07936-A1D2-4A80-B559-B55E3F15CC97}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "installer-social", "installer-social\installer-social.vdproj", "{62890E5E-85E9-47FF-8E0D-8295EF0CB97A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub", "GitHub", "{4470601E-331F-4A39-8251-BF2A9087731D}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\msbuild.yml = .github\workflows\msbuild.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{3EFCDCC4-A51A-4812-85F3-CDB8B9F25F9D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "oscpack", "oscpack\oscpack.vcxproj", "{3461493E-AA37-49DA-A26B-9622B98AF8D6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Debug|Win32.Build.0 = Debug|Win32
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Debug|x64.ActiveCfg = Debug|x64
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Debug|x64.Build.0 = Debug|x64
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Release|Win32.ActiveCfg = Release|Win32
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Release|Win32.Build.0 = Release|Win32
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Release|x64.ActiveCfg = Release|x64
+		{48E7238D-B322-47D7-A1EF-970559C02CDA}.Release|x64.Build.0 = Release|x64
+		{B6C07936-A1D2-4A80-B559-B55E3F15CC97}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{B6C07936-A1D2-4A80-B559-B55E3F15CC97}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B6C07936-A1D2-4A80-B559-B55E3F15CC97}.Release|Win32.ActiveCfg = Release|Any CPU
+		{B6C07936-A1D2-4A80-B559-B55E3F15CC97}.Release|x64.ActiveCfg = Release|Any CPU
+		{B6C07936-A1D2-4A80-B559-B55E3F15CC97}.Release|x64.Build.0 = Release|Any CPU
+		{62890E5E-85E9-47FF-8E0D-8295EF0CB97A}.Debug|Win32.ActiveCfg = Debug
+		{62890E5E-85E9-47FF-8E0D-8295EF0CB97A}.Debug|x64.ActiveCfg = Debug
+		{62890E5E-85E9-47FF-8E0D-8295EF0CB97A}.Release|Win32.ActiveCfg = Release
+		{62890E5E-85E9-47FF-8E0D-8295EF0CB97A}.Release|x64.ActiveCfg = Release
+		{62890E5E-85E9-47FF-8E0D-8295EF0CB97A}.Release|x64.Build.0 = Release
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Debug|Win32.Build.0 = Debug|Win32
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Debug|x64.ActiveCfg = Debug|x64
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Debug|x64.Build.0 = Debug|x64
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Release|Win32.ActiveCfg = Release|Win32
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Release|Win32.Build.0 = Release|Win32
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Release|x64.ActiveCfg = Release|x64
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BA775DE9-671E-4E3B-92AC-9828C2AAF490} = {A53ED6CB-95D3-4833-8A16-C6A588F16F6E}
+		{4470601E-331F-4A39-8251-BF2A9087731D} = {A53ED6CB-95D3-4833-8A16-C6A588F16F6E}
+		{3461493E-AA37-49DA-A26B-9622B98AF8D6} = {3EFCDCC4-A51A-4812-85F3-CDB8B9F25F9D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {07E77829-9766-4585-AC6C-0A28BA014E77}
+	EndGlobalSection
+EndGlobal

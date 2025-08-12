@@ -1,0 +1,21 @@
+{
+  "file_format_version" : "1.0.0",
+  "api_layer": {
+    "name": "XR_APILAYER_PSVR2_EXT_GAZE_INTERACTION",
+    "library_path": ".\\XR_APILAYER_PSVR2_EXT_GAZE_INTERACTION.dll",
+    "api_version": "1.0",
+    "implementation_version": "1",
+    "description": "PSVR 2: XR_EXT_eye_gaze_interaction",
+    "instance_extensions": [
+      {
+        "name": "XR_EXT_eye_gaze_interaction",
+        "extension_version": 2,
+        "entrypoints": []
+      }
+    ],
+    "functions": {
+      "xrNegotiateLoaderApiLayerInterface": "xrNegotiateLoaderApiLayerInterface"
+    },
+    "disable_environment": "DISABLE_XR_APILAYER_name"
+  }
+}

@@ -1,0 +1,12 @@
+[submodule "external/OpenXR-SDK"]
+	path = external/OpenXR-SDK
+	url = https://github.com/KhronosGroup/OpenXR-SDK.git
+[submodule "external/oscpack"]
+	path = external/oscpack
+	url = https://github.com/RossBencina/oscpack.git
+[submodule "external/fmt"]
+	path = external/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "external/OpenXR-MixedReality"]
+	path = external/OpenXR-MixedReality
+	url = https://github.com/microsoft/OpenXR-MixedReality.git
