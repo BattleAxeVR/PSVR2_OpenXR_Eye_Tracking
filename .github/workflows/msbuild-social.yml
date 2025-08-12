@@ -1,0 +1,87 @@
+name: MSBuild
+
+on:
+  push:
+    branches:
+    - main
+    - release/*
+    tags:
+    - '[0-9]+.[0-9]+.[0-9]+'
+  pull_request:
+    branches:
+    - main
+    - release/*
+  workflow_dispatch:
+
+env:
+  SOLUTION_FILE_PATH: PSVR2_EYE_TRACKING_SOCIAL_API_LAYER.sln
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    environment: build-and-sign
+
+    steps:
+    - name: Checkout project
+      uses: actions/checkout@v2
+
+    - name: Checkout submodules
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: git submodule update --init
+
+    - name: Setup DevEnv
+      uses: seanmiddleditch/gha-setup-vsdevenv@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v2.3.1
+      with:
+        python-version: 3.8
+
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Build
+      env:
+        PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+        PFX_NAME: ${{ env.PFX_NAME }}
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        # Need to build vdproj. We must invoke this tool from inside its own folder.
+        $DisableOutOfProcBuild=$(vswhere -latest -find  **\DisableOutOfProcBuild.exe)
+        Push-Location $(Split-Path $DisableOutOfProcBuild)
+        & $DisableOutOfProcBuild
+        Pop-Location
+        
+        # Finally, we may build the project.
+        devenv.com ${{env.SOLUTION_FILE_PATH}} /Build "${{env.BUILD_CONFIGURATION}}|x64"
+
+    - name: Signing
+      env:
+        PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
+        PFX_NAME: ${{ env.PFX_NAME }}
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        if ($env:PFX_PASSWORD) {
+          $pfxName = if ($env:PFX_NAME) { $env:PFX_NAME } else { "selfsigncert" };
+          installer/signtool.exe sign /d "PSVR 2 Social Gazes" /du "https://" /f installer/$pfxName.pfx /p "$env:PFX_PASSWORD" /v installer/output/psvr2_social_gazes.msi
+        }
+
+    - name: Publish
+      uses: actions/upload-artifact@v2
+      with:
+        name: Setup
+        path: |
+          installer/output/psvr2_social_gazes.msi
+
+    - name: Publish
+      uses: actions/upload-artifact@v2
+      with:
+        name: DeveloperPackage
+        path: |
+          bin/x64/Release/XR_APILAYER_PSVR2_XR_FB_eye_tracking_social.dll
+          bin/x64/Release/XR_APILAYER_PSVR2_XR_FB_eye_tracking_social.pdb
+          bin/x64/Release/openxr-api-layer-social.json
+          bin/x64/Release/jsoncpp.dll
+          bin/x64/Release/libzmq-mt-4_3_3.dll
