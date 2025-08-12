@@ -31,3 +31,29 @@ https://github.com/user-attachments/assets/99f63767-f74a-4ce7-b07c-db22997a0045
 MIT license.
 
 WARNING: USE AT YOUR OWN RISK!!! No Warranty is provided! 
+
+
+BUILD INSTRUCTIONS:
+
+To make these API layers work:
+
+This client code or server (DLL) have to be compiled to use the same named pipe string for direct IPC communication of the gazes and handshake, 
+
+#define PSVR2_SERVER_NAMED_PIPE_NAME "\\\\.\\pipe\\PlaystationVR2ServerPipe"
+
+I also reduced the data sent over IPC to avoid transferring junk / garbage that these OpenXR API layers can't export or use anyway.
+
+	struct XRGazeState
+	{
+		XrVector3f direction_ = { 0.0f, 0.0f, -1.0f };
+		bool is_valid_ = false;
+	};
+
+	struct AllXRGazeStates
+	{
+		XRGazeState combined_gaze_;
+		XRGazeState per_eye_gazes_[BVR::NUM_EYES];
+	};
+
+AllXRGazeStates is the data type that should be sent over IPC. I also did not use a thread to copy the data out from IPC on the client, it is fast enough I think to do it synchronously as I have.
+ 
