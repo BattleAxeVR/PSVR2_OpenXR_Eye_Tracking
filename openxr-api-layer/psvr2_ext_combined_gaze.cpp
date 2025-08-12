@@ -63,7 +63,7 @@ void PSVR2_OpenXR_EXT::update()
 
 bool PSVR2_OpenXR_EXT::isGazeAvailable(XrTime time, int eye) const 
 {
-    if (eye != INVALID_INDEX) 
+    if (eye != BVR::BOTH_EYES) 
     {
         return false;
     }
@@ -73,7 +73,7 @@ bool PSVR2_OpenXR_EXT::isGazeAvailable(XrTime time, int eye) const
 
 bool PSVR2_OpenXR_EXT::getGaze(XrTime time, int eye, XrVector3f& unitVector, bool& is_open) 
 {
-    if (eye != INVALID_INDEX)
+    if(eye != BVR::BOTH_EYES)
     {
         return false;
     }

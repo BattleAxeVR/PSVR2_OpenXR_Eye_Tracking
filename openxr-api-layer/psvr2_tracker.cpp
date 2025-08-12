@@ -62,6 +62,13 @@ void PSVR2_Tracker::update()
 
 bool PSVR2_Tracker::isGazeAvailable(XrTime time, int eye) const
 {
+    const bool is_combined = (eye == BVR::BOTH_EYES);
+
+    if (is_combined)
+    {
+        return psvr2_eye_tracker_.is_combined_gaze_available();
+    }
+
     return psvr2_eye_tracker_.is_gaze_available(eye);
 }
 
@@ -77,12 +84,15 @@ bool PSVR2_Tracker::getGaze(XrTime time, int eye, XrVector3f& unitVector, bool& 
         }
     }
 	
-	if ((eye == INVALID_INDEX) || (eye == BVR::LEFT))
+    const bool is_combined = (eye == BVR::BOTH_EYES);
+    const bool is_left_eye = (eye == BVR::LEFT);
+
+	if (is_combined || is_left_eye)
     {
         update();
     }
 
-	if (eye == INVALID_INDEX)
+	if (is_combined)
 	{
 		const bool combined_gaze_ok = psvr2_eye_tracker_.get_combined_gaze(unitVector, false);
 		return combined_gaze_ok;	

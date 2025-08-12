@@ -10,6 +10,7 @@ namespace BVR
 	const int LEFT = 0;
 	const int RIGHT = 1;
 	const int NUM_EYES = 2;
+	const int BOTH_EYES = 2;
 }
 
 #define ENABLE_PSVR2_EYE_TRACKING 1

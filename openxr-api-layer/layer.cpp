@@ -640,7 +640,7 @@ namespace openxr_api_layer
                     location->locationFlags = 0;
                     XrVector3f gazeUnitVector;
 
-                    int eye = INVALID_INDEX;
+                    const int eye = BVR::BOTH_EYES;
                     bool is_open = true;
 
                     if (getEyeGaze(time, false, eye, gazeUnitVector, is_open)) {
@@ -718,7 +718,7 @@ namespace openxr_api_layer
                 // TODO: Support the notion of (in)active actionsets and actionset priority.
                 XrVector3f dummy{};
 
-                int eye = INVALID_INDEX;
+                const int eye = BVR::BOTH_EYES;
                 bool is_open = true;
 
                 state->isActive = getEyeGaze(m_lastFrameBegunTime, true, eye, dummy, is_open) ? XR_TRUE : XR_FALSE;

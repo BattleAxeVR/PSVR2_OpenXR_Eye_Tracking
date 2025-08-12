@@ -62,7 +62,7 @@ void PSVR2_Social_Gazes::update()
 
 bool PSVR2_Social_Gazes::isGazeAvailable(XrTime time, int eye) const
 {
-    if (eye == INVALID_INDEX) 
+    if(eye == BVR::BOTH_EYES)
     {
         return false;
     }
@@ -72,7 +72,7 @@ bool PSVR2_Social_Gazes::isGazeAvailable(XrTime time, int eye) const
 
 bool PSVR2_Social_Gazes::getGaze(XrTime time, int eye, XrVector3f& unitVector, bool& is_open) 
 {
-    if (eye == INVALID_INDEX) 
+    if (eye == BVR::BOTH_EYES)
     {
         return false;
     }
