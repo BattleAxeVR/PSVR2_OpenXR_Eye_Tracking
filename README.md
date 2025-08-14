@@ -2,7 +2,9 @@
 
 OpenXR-based Eye-tracking for PSVR 2 on PC / SteamVR. 
 
-NOTE: THIS REPO HAS NO 3RD PARTY PRIVATE UNRELEASED CODE or BINARIES IN IT.
+NOTE: THIS REPO HAS NO NDA'ed 3RD PARTY PRIVATE UNRELEASED CODE or BINARIES IN IT.
+
+WARNING: USE AT YOUR OWN RISK!!! No Warranty is provided! 
 
 These API layers rely on a THIRD PARTY closed-source and as-yet unreleased DLL (do NOT ask me for it).
 
@@ -27,10 +29,6 @@ OPTION 3: PSVR 2 - FB/Meta Social Gazes (dual independent eye support) ONLY (use
 <img width="598" height="465" alt="Social_Installed_Active" src="https://github.com/user-attachments/assets/9ea9cb40-c965-4b97-9625-e06792b9ba31" />
 
 https://github.com/user-attachments/assets/99f63767-f74a-4ce7-b07c-db22997a0045
-
-MIT license.
-
-WARNING: USE AT YOUR OWN RISK!!! No Warranty is provided! 
 
 
 BUILD INSTRUCTIONS:
