@@ -6,8 +6,6 @@ NOTE: THIS REPO HAS NO NDA'ed 3RD PARTY PRIVATE UNRELEASED CODE or BINARIES IN I
 
 WARNING: USE AT YOUR OWN RISK!!! No Warranty is provided! 
 
-These API layers rely on a THIRD PARTY closed-source and as-yet unreleased DLL (do NOT ask me for it).
-
 Calibration isn't finished yet, it will be done in a separate app.
 
 To code this, I modified the framework provided by mbucchia here:
