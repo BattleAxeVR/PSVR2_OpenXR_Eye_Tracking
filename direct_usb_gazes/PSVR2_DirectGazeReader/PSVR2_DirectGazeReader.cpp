@@ -4,6 +4,7 @@
 
 #include "psvr2_structs.h"
 
+#if 0
 int verbose = 0;
 
 static void print_endpoint_comp(const struct libusb_ss_endpoint_companion_descriptor* ep_comp)
@@ -240,6 +241,7 @@ static int test_wrapped_device(const char* device_name)
 	printf("Testing wrapped devices is not supported on your platform\n");
 	return 1;
 }
+#endif
 
 
 bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
