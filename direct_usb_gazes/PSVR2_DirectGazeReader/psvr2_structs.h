@@ -398,11 +398,6 @@ struct psvr2_hmd
 	struct psvr2_et_data et_data;
 };
 
-//static inline struct psvr2_hmd* psvr2_hmd(struct xrt_device* xdev)
-//{
-//	return (struct psvr2_hmd*)xdev;
-//}
-
 enum psvr2_hmd_input_name
 {
 	PSVR2_HMD_INPUT_HEAD_POSE,
@@ -414,18 +409,18 @@ enum psvr2_hmd_input_name
 	PSVR2_HMD_INPUT_COUNT,
 };
 
-void psvr2_compute_distortion_asymmetric(float* calibration, struct xrt_uv_triplet* distCoords, int eEye, float fU, float fV);
+//void psvr2_compute_distortion_asymmetric(float* calibration, xrt_uv_triplet* distCoords, int eEye, float fU, float fV);
 
-bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type);
+bool psvr2_usb_xfer_continue(libusb_transfer* xfer, const char* type);
 
-bool send_psvr2_control(struct psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint8_t* pkt_data, uint32_t pkt_len);
+bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint8_t* pkt_data, uint32_t pkt_len);
 
-void psvr2_free_et_data(struct psvr2_hmd* hmd);
+void psvr2_free_et_data(psvr2_hmd* hmd);
 
-int psvr2_start_gaze_tracking(struct psvr2_hmd* hmd);
+int psvr2_start_gaze_tracking(psvr2_hmd* hmd);
 
-//xrt_result_t psvr2_get_face_tracking(struct xrt_device* xdev, enum xrt_input_name facial_expression_type,
-//	int64_t at_timestamp_ns, struct xrt_facial_expression_set* out_value);
+//xrt_result_t psvr2_get_face_tracking(xrt_device* xdev, enum xrt_input_name facial_expression_type,
+//	int64_t at_timestamp_ns, xrt_facial_expression_set* out_value);
 
 
 #endif
