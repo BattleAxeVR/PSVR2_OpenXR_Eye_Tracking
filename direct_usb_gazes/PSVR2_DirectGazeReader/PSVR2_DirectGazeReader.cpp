@@ -4,7 +4,7 @@
 
 int verbose = 0;
 
-static void print_endpoint_comp(const struct libusb_ss_endpoint_companion_descriptor *ep_comp)
+static void print_endpoint_comp(const struct libusb_ss_endpoint_companion_descriptor* ep_comp)
 {
 	printf("      USB 3.0 Endpoint Companion:\n");
 	printf("        bMaxBurst:           %u\n", ep_comp->bMaxBurst);
@@ -12,7 +12,7 @@ static void print_endpoint_comp(const struct libusb_ss_endpoint_companion_descri
 	printf("        wBytesPerInterval:   %u\n", ep_comp->wBytesPerInterval);
 }
 
-static void print_endpoint(const struct libusb_endpoint_descriptor *endpoint)
+static void print_endpoint(const struct libusb_endpoint_descriptor* endpoint)
 {
 	int i, ret;
 
@@ -24,12 +24,14 @@ static void print_endpoint(const struct libusb_endpoint_descriptor *endpoint)
 	printf("        bRefresh:            %u\n", endpoint->bRefresh);
 	printf("        bSynchAddress:       %u\n", endpoint->bSynchAddress);
 
-	for (i = 0; i < endpoint->extra_length;) {
-		if (LIBUSB_DT_SS_ENDPOINT_COMPANION == endpoint->extra[i + 1]) {
-			struct libusb_ss_endpoint_companion_descriptor *ep_comp;
+	for(i = 0; i < endpoint->extra_length;)
+	{
+		if(LIBUSB_DT_SS_ENDPOINT_COMPANION == endpoint->extra[i + 1])
+		{
+			struct libusb_ss_endpoint_companion_descriptor* ep_comp;
 
 			ret = libusb_get_ss_endpoint_companion_descriptor(NULL, endpoint, &ep_comp);
-			if (LIBUSB_SUCCESS != ret)
+			if(LIBUSB_SUCCESS != ret)
 				continue;
 
 			print_endpoint_comp(ep_comp);
@@ -41,7 +43,7 @@ static void print_endpoint(const struct libusb_endpoint_descriptor *endpoint)
 	}
 }
 
-static void print_altsetting(const struct libusb_interface_descriptor *interface)
+static void print_altsetting(const struct libusb_interface_descriptor* interface)
 {
 	uint8_t i;
 
@@ -54,18 +56,18 @@ static void print_altsetting(const struct libusb_interface_descriptor *interface
 	printf("      bInterfaceProtocol:    %u\n", interface->bInterfaceProtocol);
 	printf("      iInterface:            %u\n", interface->iInterface);
 
-	for (i = 0; i < interface->bNumEndpoints; i++)
+	for(i = 0; i < interface->bNumEndpoints; i++)
 		print_endpoint(&interface->endpoint[i]);
 }
 
-static void print_2_0_ext_cap(struct libusb_usb_2_0_extension_descriptor *usb_2_0_ext_cap)
+static void print_2_0_ext_cap(struct libusb_usb_2_0_extension_descriptor* usb_2_0_ext_cap)
 {
 	printf("    USB 2.0 Extension Capabilities:\n");
 	printf("      bDevCapabilityType:    %u\n", usb_2_0_ext_cap->bDevCapabilityType);
 	printf("      bmAttributes:          %08xh\n", usb_2_0_ext_cap->bmAttributes);
 }
 
-static void print_ss_usb_cap(struct libusb_ss_usb_device_capability_descriptor *ss_usb_cap)
+static void print_ss_usb_cap(struct libusb_ss_usb_device_capability_descriptor* ss_usb_cap)
 {
 	printf("    USB 3.0 Capabilities:\n");
 	printf("      bDevCapabilityType:    %u\n", ss_usb_cap->bDevCapabilityType);
@@ -76,37 +78,41 @@ static void print_ss_usb_cap(struct libusb_ss_usb_device_capability_descriptor *
 	printf("      bU2devExitLat:         %u\n", ss_usb_cap->bU2DevExitLat);
 }
 
-static void print_bos(libusb_device_handle *handle)
+static void print_bos(libusb_device_handle* handle)
 {
-	struct libusb_bos_descriptor *bos;
+	struct libusb_bos_descriptor* bos;
 	uint8_t i;
 	int ret;
 
 	ret = libusb_get_bos_descriptor(handle, &bos);
-	if (ret < 0)
+	if(ret < 0)
 		return;
 
 	printf("  Binary Object Store (BOS):\n");
 	printf("    wTotalLength:            %u\n", bos->wTotalLength);
 	printf("    bNumDeviceCaps:          %u\n", bos->bNumDeviceCaps);
 
-	for (i = 0; i < bos->bNumDeviceCaps; i++) {
-		struct libusb_bos_dev_capability_descriptor *dev_cap = bos->dev_capability[i];
+	for(i = 0; i < bos->bNumDeviceCaps; i++)
+	{
+		struct libusb_bos_dev_capability_descriptor* dev_cap = bos->dev_capability[i];
 
-		if (dev_cap->bDevCapabilityType == LIBUSB_BT_USB_2_0_EXTENSION) {
-			struct libusb_usb_2_0_extension_descriptor *usb_2_0_extension;
+		if(dev_cap->bDevCapabilityType == LIBUSB_BT_USB_2_0_EXTENSION)
+		{
+			struct libusb_usb_2_0_extension_descriptor* usb_2_0_extension;
 
 			ret = libusb_get_usb_2_0_extension_descriptor(NULL, dev_cap, &usb_2_0_extension);
-			if (ret < 0)
+			if(ret < 0)
 				return;
 
 			print_2_0_ext_cap(usb_2_0_extension);
 			libusb_free_usb_2_0_extension_descriptor(usb_2_0_extension);
-		} else if (dev_cap->bDevCapabilityType == LIBUSB_BT_SS_USB_DEVICE_CAPABILITY) {
-			struct libusb_ss_usb_device_capability_descriptor *ss_dev_cap;
+		}
+		else if(dev_cap->bDevCapabilityType == LIBUSB_BT_SS_USB_DEVICE_CAPABILITY)
+		{
+			struct libusb_ss_usb_device_capability_descriptor* ss_dev_cap;
 
 			ret = libusb_get_ss_usb_device_capability_descriptor(NULL, dev_cap, &ss_dev_cap);
-			if (ret < 0)
+			if(ret < 0)
 				return;
 
 			print_ss_usb_cap(ss_dev_cap);
@@ -117,15 +123,15 @@ static void print_bos(libusb_device_handle *handle)
 	libusb_free_bos_descriptor(bos);
 }
 
-static void print_interface(const struct libusb_interface *interface)
+static void print_interface(const struct libusb_interface* interface)
 {
 	int i;
 
-	for (i = 0; i < interface->num_altsetting; i++)
+	for(i = 0; i < interface->num_altsetting; i++)
 		print_altsetting(&interface->altsetting[i]);
 }
 
-static void print_configuration(struct libusb_config_descriptor *config)
+static void print_configuration(struct libusb_config_descriptor* config)
 {
 	uint8_t i;
 
@@ -137,19 +143,20 @@ static void print_configuration(struct libusb_config_descriptor *config)
 	printf("    bmAttributes:            %02xh\n", config->bmAttributes);
 	printf("    MaxPower:                %u\n", config->MaxPower);
 
-	for (i = 0; i < config->bNumInterfaces; i++)
+	for(i = 0; i < config->bNumInterfaces; i++)
 		print_interface(&config->interface[i]);
 }
 
-static void print_device(libusb_device *dev, libusb_device_handle *handle)
+static void print_device(libusb_device* dev, libusb_device_handle* handle)
 {
 	struct libusb_device_descriptor desc;
 	unsigned char string[256];
-	const char *speed;
+	const char* speed;
 	int ret;
 	uint8_t i;
 
-	switch (libusb_get_device_speed(dev)) {
+	switch(libusb_get_device_speed(dev))
+	{
 	case LIBUSB_SPEED_LOW:		speed = "1.5M"; break;
 	case LIBUSB_SPEED_FULL:		speed = "12M"; break;
 	case LIBUSB_SPEED_HIGH:		speed = "480M"; break;
@@ -160,7 +167,8 @@ static void print_device(libusb_device *dev, libusb_device_handle *handle)
 	}
 
 	ret = libusb_get_device_descriptor(dev, &desc);
-	if (ret < 0) {
+	if(ret < 0)
+	{
 		fprintf(stderr, "failed to get device descriptor");
 		return;
 	}
@@ -169,35 +177,42 @@ static void print_device(libusb_device *dev, libusb_device_handle *handle)
 		libusb_get_bus_number(dev), libusb_get_device_address(dev),
 		desc.idVendor, desc.idProduct, speed);
 
-	if (!handle)
+	if(!handle)
 		libusb_open(dev, &handle);
 
-	if (handle) {
-		if (desc.iManufacturer) {
+	if(handle)
+	{
+		if(desc.iManufacturer)
+		{
 			ret = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, string, sizeof(string));
-			if (ret > 0)
-				printf("  Manufacturer:              %s\n", (char *)string);
+			if(ret > 0)
+				printf("  Manufacturer:              %s\n", (char*)string);
 		}
 
-		if (desc.iProduct) {
+		if(desc.iProduct)
+		{
 			ret = libusb_get_string_descriptor_ascii(handle, desc.iProduct, string, sizeof(string));
-			if (ret > 0)
-				printf("  Product:                   %s\n", (char *)string);
+			if(ret > 0)
+				printf("  Product:                   %s\n", (char*)string);
 		}
 
-		if (desc.iSerialNumber && verbose) {
+		if(desc.iSerialNumber && verbose)
+		{
 			ret = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, string, sizeof(string));
-			if (ret > 0)
-				printf("  Serial Number:             %s\n", (char *)string);
+			if(ret > 0)
+				printf("  Serial Number:             %s\n", (char*)string);
 		}
 	}
 
-	if (verbose) {
-		for (i = 0; i < desc.bNumConfigurations; i++) {
-			struct libusb_config_descriptor *config;
+	if(verbose)
+	{
+		for(i = 0; i < desc.bNumConfigurations; i++)
+		{
+			struct libusb_config_descriptor* config;
 
 			ret = libusb_get_config_descriptor(dev, i, &config);
-			if (LIBUSB_SUCCESS != ret) {
+			if(LIBUSB_SUCCESS != ret)
+			{
 				printf("  Couldn't retrieve descriptors\n");
 				continue;
 			}
@@ -207,38 +222,44 @@ static void print_device(libusb_device *dev, libusb_device_handle *handle)
 			libusb_free_config_descriptor(config);
 		}
 
-		if (handle && desc.bcdUSB >= 0x0201)
+		if(handle && desc.bcdUSB >= 0x0201)
 			print_bos(handle);
 	}
 
-	if (handle)
+	if(handle)
 		libusb_close(handle);
 }
 
-static int test_wrapped_device(const char *device_name)
+static int test_wrapped_device(const char* device_name)
 {
 	(void)device_name;
 	printf("Testing wrapped devices is not supported on your platform\n");
 	return 1;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	const std::string welcome_str = "PSVR 2 Direct Gaze Reader\n\n";
 	printf(welcome_str.c_str());
 
-	const char *device_name = NULL;
-	libusb_device **devs;
+	const char* device_name = NULL;
+	libusb_device** devs;
 	ssize_t cnt;
 	int r, i;
 
-	for (i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "-v")) {
+	for(i = 1; i < argc; i++)
+	{
+		if(!strcmp(argv[i], "-v"))
+		{
 			verbose = 1;
-		} else if (!strcmp(argv[i], "-d") && (i + 1) < argc) {
+		}
+		else if(!strcmp(argv[i], "-d") && (i + 1) < argc)
+		{
 			i++;
 			device_name = argv[i];
-		} else {
+		}
+		else
+		{
 			printf("Usage %s [-v] [-d </dev/bus/usb/...>]\n", argv[0]);
 			printf("Note use -d to test libusb_wrap_sys_device()\n");
 			return 1;
@@ -246,24 +267,29 @@ int main(int argc, char *argv[])
 	}
 
 	r = libusb_init_context(/*ctx=*/NULL, /*options=*/NULL, /*num_options=*/0);
-	if (r < 0)
+	if(r < 0)
 		return r;
 
-	if (device_name) {
+	if(device_name)
+	{
 		r = test_wrapped_device(device_name);
-	} else {
+	}
+	else
+	{
 		cnt = libusb_get_device_list(NULL, &devs);
-		if (cnt < 0) {
+		if(cnt < 0)
+		{
 			libusb_exit(NULL);
 			return 1;
 		}
 
-		for (i = 0; devs[i]; i++)
+		for(i = 0; devs[i]; i++)
 			print_device(devs[i], NULL);
 
 		libusb_free_device_list(devs, 1);
 	}
 
 	libusb_exit(NULL);
+
 	return r;
 }
