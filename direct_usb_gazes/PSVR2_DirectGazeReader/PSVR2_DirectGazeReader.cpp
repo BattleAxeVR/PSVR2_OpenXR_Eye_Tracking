@@ -400,19 +400,19 @@ uint8_t gaze_buf[USB_GAZE_XFER_SIZE] = { 0 };
 
 static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 {
-	psvr2_gaze_state gaze_state = {};
+	psvr2_gaze_state input_gaze_state = {};
 
-	if(bytes_read < sizeof(gaze_state))
+	if(bytes_read < sizeof(input_gaze_state))
 	{
 		//PSVR2_WARN(hmd, "Gaze packet too small: %zu bytes", bytes_read);
 		return;
 	}
 
-	memcpy(&gaze_state, buf, sizeof(gaze_state));
+	memcpy(&input_gaze_state, buf, sizeof(input_gaze_state));
 
-	if(memcmp(&gaze_state.header, "GS", 2) != 0)
+	if(memcmp(&input_gaze_state.header, "GS", 2) != 0)
 	{
-		//PSVR2_WARN(hmd, "Got gaze with bad header %d", gaze_state.header);
+		//PSVR2_WARN(hmd, "Got gaze with bad header %d", input_gaze_state.header);
 		return;
 	}
 
@@ -421,7 +421,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		hmd->et_data.processed_sample_packet = true;
 	}
 
-	uint32_t remote_sample_timestamp_us = gaze_state.gaze_data_.combined_gaze_.timestamp;
+	uint32_t remote_sample_timestamp_us = input_gaze_state.gaze_data_.combined_gaze_.timestamp;
 
 	// wrap-around intentional and A-OK, given these are unsigned
 	uint32_t remote_sample_timestamp_delta_us = remote_sample_timestamp_us - hmd->et_data.last_remote_report_sample_time_us;
@@ -437,9 +437,9 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
-		psvr2_per_eye_gaze& eye_gaze_data = (eye == LEFT) ? gaze_state.gaze_data_.left_gaze_ : gaze_state.gaze_data_.right_gaze_;
+		const psvr2_per_eye_gaze& input_per_eye_gaze_data = (eye == LEFT) ? input_gaze_state.gaze_data_.left_gaze_ : input_gaze_state.gaze_data_.right_gaze_;
 
-		vec3 gaze_point = eye_gaze_data.gaze_point;
+		vec3 gaze_point = input_per_eye_gaze_data.gaze_point;
 
 		// convert to millimeters
 		gaze_point.x *= 0.001f;
@@ -450,14 +450,14 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		gaze_point.x *= -1;
 		gaze_point.z *= -1;
 
-		vec3 gaze_direction = eye_gaze_data.gaze_direction;
+		vec3 gaze_direction = input_per_eye_gaze_data.gaze_direction;
 		gaze_direction.x *= -1;
 		gaze_direction.z *= -1;
 
-		psvr2_per_eye_gaze& gaze = hmd->et_data.gazes_[eye];
+		psvr2_per_eye_gaze& output_per_eye_gaze = hmd->et_data.gazes_[eye];
 
 #if 0
-		if(gaze.is_blink_state_valid && (gaze.blink != gaze.blink_interp))
+		if(output_per_eye_gaze.is_blink_state_valid && (output_per_eye_gaze.blink != output_per_eye_gaze.blink_interp))
 		{
 			const timepoint_ns blink_time_ns = U_TIME_1MS_IN_NS * 100LLU;
 
@@ -467,39 +467,41 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 			// direction interp is moving
 			float dir = gaze.blink_state ? 1 : -1;
 
-			eye_data->blink_interp += dir * blink_delta;
-			eye_data->blink_interp = std::clamp(eye_data->blink_interp, 0, 1);
+			output_per_eye_gaze->blink_interp += dir * blink_delta;
+			output_per_eye_gaze->blink_interp = std::clamp(output_per_eye_gaze->blink_interp, 0, 1);
 		}
 #endif
 
-#if 0
-		if(eye_gaze_data->gaze_direction_valid)
+		if(input_per_eye_gaze_data.is_gaze_direction_valid)
 		{
+#if 0
 			m_filter_euro_vec3_run(&eye_data->gaze_direction_filter, timestamp_ns, &gaze_direction, &eye_data->filtered_gaze_direction);
 			math_vec3_normalize(&eye_data->filtered_gaze_direction);
+#endif
 		}
 
-		gaze.blink = eye_gaze_data->blink;
-		gaze.blink_valid = eye_gaze_data->blink_valid;
-		gaze.gaze_direction = gaze_direction;
-		gaze.gaze_direction_valid = eye_gaze_data->gaze_direction_valid;
-		gaze.gaze_point = gaze_point;
-		gaze.gaze_point_valid = eye_gaze_data->gaze_point_mm_valid;
-		gaze.pupil_diameter = eye_gaze_data->pupil_diameter_mm / 1000.0f; // to m
-		gaze.pupil_diameter_valid = eye_gaze_data->pupil_diameter_valid;
-#endif
+		output_per_eye_gaze.is_blink_state_valid = input_per_eye_gaze_data.is_blink_state_valid;
+		output_per_eye_gaze.blink_state = input_per_eye_gaze_data.blink_state;
+		
+		output_per_eye_gaze.is_gaze_direction_valid = input_per_eye_gaze_data.is_gaze_direction_valid;
+		output_per_eye_gaze.gaze_direction = gaze_direction;
+
+		output_per_eye_gaze.is_gaze_point_valid = input_per_eye_gaze_data.is_gaze_point_valid;
+		output_per_eye_gaze.gaze_point = gaze_point;
+		
+		output_per_eye_gaze.is_pupil_diameter_valid = input_per_eye_gaze_data.is_pupil_diameter_valid;
+		output_per_eye_gaze.pupil_diameter = input_per_eye_gaze_data.pupil_diameter * 0.001f; // convert to meters
 	}
 
 	{
+		psvr2_combined_gaze& output_combined_gaze = hmd->et_data.combined_gaze_;
 
-#if 0
-		pkt_gaze_combined* combined = &gaze_state.packet_data.combined;
-
-		xrt_vec3 gaze_direction = combined->normalized_gaze;
+		vec3 gaze_direction = input_gaze_state.gaze_data_.combined_gaze_.normalized_gaze_direction;
 
 		// flip to correct coordinate space
 		gaze_direction.x *= -1;
 		gaze_direction.z *= -1;
+
 
 		vec3 gaze_point = combined->gaze_point_3d;
 
@@ -511,6 +513,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		gaze_point.x *= -1;
 		gaze_point.z *= -1;
 
+#if 0
 		psvr2_et_combined_data* eye_data = &hmd->et_data.combined;
 
 		if(combined->normalized_gaze_valid)
