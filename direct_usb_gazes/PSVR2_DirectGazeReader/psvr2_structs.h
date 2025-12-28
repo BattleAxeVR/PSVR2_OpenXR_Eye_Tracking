@@ -398,10 +398,10 @@ struct psvr2_hmd
 	struct psvr2_et_data et_data;
 };
 
-static inline struct psvr2_hmd* psvr2_hmd(struct xrt_device* xdev)
-{
-	return (struct psvr2_hmd*)xdev;
-}
+//static inline struct psvr2_hmd* psvr2_hmd(struct xrt_device* xdev)
+//{
+//	return (struct psvr2_hmd*)xdev;
+//}
 
 enum psvr2_hmd_input_name
 {

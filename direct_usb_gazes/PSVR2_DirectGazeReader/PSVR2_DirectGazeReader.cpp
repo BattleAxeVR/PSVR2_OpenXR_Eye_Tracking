@@ -169,18 +169,20 @@ static void print_device(libusb_device* dev, libusb_device_handle* handle)
 	}
 
 	ret = libusb_get_device_descriptor(dev, &desc);
+
 	if(ret < 0)
 	{
 		fprintf(stderr, "failed to get device descriptor");
 		return;
 	}
 
-	printf("Dev (bus %u, device %u): %04X - %04X speed: %s\n",
-		libusb_get_bus_number(dev), libusb_get_device_address(dev),
-		desc.idVendor, desc.idProduct, speed);
+	printf("Dev (bus %u, device %u): %04X - %04X speed: %s\n", libusb_get_bus_number(dev), libusb_get_device_address(dev),	desc.idVendor, desc.idProduct, speed);
 
 	if(!handle)
+	{
 		libusb_open(dev, &handle);
+	}
+		
 
 	if(handle)
 	{
@@ -239,9 +241,10 @@ static int test_wrapped_device(const char* device_name)
 	return 1;
 }
 
-#if 0
+
 bool psvr2_usb_start(psvr2_hmd* hmd)
 {
+#if 0
 	bool result = false;
 	int res;
 
@@ -404,19 +407,29 @@ out:
 	os_thread_helper_unlock(&hmd->usb_thread);
 	return result;
 
-	return 0;
-}
-
 #endif
 
+
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
 	const std::string welcome_str = "PSVR 2 Direct Gaze Reader\n\n";
 	printf(welcome_str.c_str());
 
+#if 1
+	psvr2_hmd hmd = {};
+	bool start_ok = psvr2_usb_start(&hmd);
+
+	if(!start_ok)
+	{
+		return -1;
+	}
+
+#else
 	const char* device_name = NULL;
-	libusb_device** devs;
+	libusb_device** devs = nullptr;
 	ssize_t cnt;
 	int r, i;
 
@@ -463,6 +476,7 @@ int main(int argc, char* argv[])
 	}
 
 	libusb_exit(NULL);
+#endif
 
-	return r;
+	return 0;
 }
