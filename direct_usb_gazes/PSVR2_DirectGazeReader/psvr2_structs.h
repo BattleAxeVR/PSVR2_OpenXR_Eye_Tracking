@@ -6,19 +6,20 @@
 #include <stdio.h>
 #include <assert.h>
 #include <libusb.h>
+#include <mutex>
+#include <thread>
+#include <chrono>
 
 #define SUPPORT_EYE_TRACKING 1
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
+#define SUPPORT_PSVR2_CAMERAS 0
 #define SUPPORT_FACE_TRACKING (SUPPORT_EYE_TRACKING && 0)
 
-#define NUM_CAM_XFERS 1
+#ifndef NUM_EYES
+#define NUM_EYES 2
+#endif
 
-//#define PSVR2_TRACE(p, ...) U_LOG_XDEV_IFL_T(&p->base, p->log_level, __VA_ARGS__)
-//#define PSVR2_TRACE_HEX(p, data, data_size) U_LOG_XDEV_IFL_T_HEX(&p->base, p->log_level, data, data_size)
-//#define PSVR2_DEBUG(p, ...) U_LOG_XDEV_IFL_D(&p->base, p->log_level, __VA_ARGS__)
-//#define PSVR2_DEBUG_HEX(p, data, data_size) U_LOG_XDEV_IFL_D_HEX(&p->base, p->log_level, data, data_size)
-//#define PSVR2_WARN(p, ...) U_LOG_XDEV_IFL_W(&p->base, p->log_level, __VA_ARGS__)
-//#define PSVR2_ERROR(p, ...) U_LOG_XDEV_IFL_E(&p->base, p->log_level, __VA_ARGS__)
+#define NUM_CAM_XFERS 1
 
 #define TIMESTAMP_SAMPLES 100
 
@@ -61,6 +62,8 @@
 #define IMU_PERIOD_NS ((time_duration_ns)(1000000000.0f / IMU_FREQ))
 
 typedef uint32_t uint;
+typedef uint64_t timepoint_ns;
+
 
 struct imu_record
 {
@@ -125,6 +128,7 @@ struct sie_ctrl_pkt
 };
 #pragma pack(pop)
 
+#if SUPPORT_PSVR2_CAMERAS
 enum psvr2_camera_mode
 {
 	PSVR2_CAMERA_MODE_OFF = 0,
@@ -163,6 +167,7 @@ enum psvr2_camera_mode
 	// right/bottom)
 	PSVR2_CAMERA_MODE_BOTTOM_SBS_BC4 = 0x10,
 };
+#endif // SUPPORT_PSVR2_CAMERAS
 
 struct vec2
 {
@@ -197,6 +202,7 @@ enum psvr2_set_peripheral_subcommand
 	PSVR2_SET_PERIPHERAL_SUBCMD_MOTOR = 0x01,
 };
 
+#if SUPPORT_EYE_TRACKING
 struct psvr2_per_eye_gaze
 {
 	uint is_gaze_point_valid = 0;
@@ -282,25 +288,25 @@ struct psvr2_gaze_state
 
 struct psvr2_et_data
 {
-	//struct os_thread_helper eye_tracking_thread;
+	std::thread eye_tracking_thread;
+	std::mutex data_mutex;
 
 	//! Whether eye tracking is currently enabled
-	bool want_enabled;
-	bool force_enable;
+	bool want_enabled = true;
+	bool force_enable = true;
 
 	//! Whether the eye tracking enable command has been sent
-	bool enabled;
+	bool enabled = false;
 
-	struct m_relation_history* gaze_relation_history;
-
-	//struct os_mutex data_mutex;
-	psvr2_per_eye_gaze gazes_[2];
+	//m_relation_history* gaze_relation_history;
+	
+	psvr2_per_eye_gaze gazes_[NUM_EYES];
 	psvr2_combined_gaze combined_gaze_;
 
 	bool processed_sample_packet;
 
 	uint32_t last_remote_report_sample_time_us;
-	//timepoint_ns last_remote_report_sample_time_ns;
+	timepoint_ns last_remote_report_sample_time_ns;
 
 	bool unk_float_4_valid;
 	float unk_float_4;
@@ -308,44 +314,48 @@ struct psvr2_et_data
 	bool unk_float_5_valid;
 	float unk_float_5;
 };
+#endif // SUPPORT_EYE_TRACKING
 
 struct psvr2_hmd
 {
+	std::thread usb_thread;
+	std::mutex data_lock;
 	//xrt_device base;
 	//xrt_pose pose;
 
-	enum u_logging_level log_level;
-
-	//os_mutex data_lock;
+	//enum u_logging_level log_level;
 
 	// Device status
-	uint8_t dprx_status;               //< DisplayPort receiver status
+	uint8_t dprx_status = 0; //< DisplayPort receiver status
 
 	//xrt_atomic_s32_t proximity_sensor; //< Atomic state for whether the proximity sensor is triggered
 
-	bool function_button;              //< Boolean state for whether the function button is pressed
+	bool function_button = false;//< Boolean state for whether the function button is pressed
 
 	bool ipd_updated; //< Whether the IPD has been updated, and an HMD info refresh is needed
 	uint8_t ipd_mm;   //< IPD dial value in mm, from 59 to 72mm
 
-	bool camera_enable;                 //< Whether the camera is enabled
-	enum psvr2_camera_mode camera_mode; //< The current camera mode
+#if SUPPORT_PSVR2_CAMERAS
+	bool camera_enable = false; //< Whether the camera is enabled
+	psvr2_camera_mode camera_mode; //< The current camera mode
 
 	//u_var_button camera_enable_btn;
 	//u_var_button camera_mode_btn;
 
-	//u_var_button brightness_btn;
-	float brightness;
+#endif
 
-	/* IMU input data */
-	uint32_t last_imu_vts_us;   //< Last VTS timestamp, in microseconds
-	uint16_t last_imu_ts;       //< Last IMU timestamp, in microseconds
+	//u_var_button brightness_btn;
+	float brightness = 1.0f;
+
+	// IMU input data
+	uint last_imu_vts_us = 0;   //< Last VTS timestamp, in microseconds
+	uint16_t last_imu_ts = 0; //< Last IMU timestamp, in microseconds
 
 	//xrt_vec3 last_gyro;  //< Last gyro reading, in rad/s
 	//xrt_vec3 last_accel; //< Last accel reading, in m/s²
 
-	/* SLAM input data */
-	uint32_t last_slam_vts_us;      //< Last slam timestamp, in microseconds
+	// SLAM input data
+	uint last_slam_vts_us = 0;      //< Last slam timestamp, in microseconds
 	//xrt_pose last_slam_pose; //< Last SLAM pose reading
 
 	//xrt_pose slam_correction_pose;
@@ -354,67 +364,70 @@ struct psvr2_hmd
 
 	//xrt_pose T_imu_head; //< Constant transform from SLAM tracker pose to head pose
 
-	/* Display parameters */
+	// Display parameters
 	//u_device_simple_info info;
 
-	/* Camera debug sinks */
+	// Camera debug sinks
 	//u_sink_debug debug_sinks[4];
 
-	/* USB communication */
-	libusb_context* ctx;
-	libusb_device_handle* dev;
-
-	//struct os_thread_helper usb_thread;
+	// USB communication
+	libusb_context* ctx = nullptr;
+	libusb_device_handle* dev = nullptr;
 
 	int usb_complete;
 	int usb_active_xfers;
 
 	// Status report
-	libusb_transfer* status_xfer;
+	libusb_transfer* status_xfer = nullptr;
 
 	// SLAM (bulk) transfer
-	libusb_transfer* slam_xfer;
+	libusb_transfer* slam_xfer = nullptr;
 
 	// Camera (bulk) transfers
-	libusb_transfer* camera_xfers[NUM_CAM_XFERS];
+	libusb_transfer* camera_xfers[NUM_CAM_XFERS] = {};
 
 	// LD EP9 (bulk) transfer
-	libusb_transfer* led_detector_xfer;
+	libusb_transfer* led_detector_xfer = nullptr;
 
 	// RP EP10 (bulk) transfer
-	libusb_transfer* relocalizer_xfer;
+	libusb_transfer* relocalizer_xfer = nullptr;
 
 	// VD EP11 (bulk) transfer
-	libusb_transfer* vd_xfer;
+	libusb_transfer* vd_xfer = nullptr;
 
+#if SUPPORT_EYE_TRACKING
 	// Gaze transfer
-	libusb_transfer* gaze_xfer;
+	libusb_transfer* gaze_xfer = nullptr;
+#endif
 
 	/* Distortion calibration parameters, to be used with
 	 * psvr2_compute_distortion_asymmetric. Very specific to
 	 * PS VR2. */
 	float distortion_calibration[8];
 
-	/* Timing data */
-	int timestamp_samples;
+	// Timing data
+	int timestamp_samples = 0;
 
-	//timepoint_ns last_imu_vts_ns;
-	//timepoint_ns last_slam_vts_ns;
-	//timepoint_ns system_zero_ns;
-	//timepoint_ns last_imu_ns;
+	timepoint_ns last_imu_vts_ns = 0;
+	timepoint_ns last_slam_vts_ns = 0;
+	timepoint_ns system_zero_ns = 0;
+	timepoint_ns last_imu_ns = 0;
 
-	//time_duration_ns hw2mono_vts;
-	//time_duration_ns hw2mono_imu;
+	//time_duration_ns hw2mono_vts = 0;
+	//time_duration_ns hw2mono_imu = 0;
 
-	/* Tracking state */
-	//m_relation_history* slam_relation_history;
-	//m_ff_vec3_f32* ff_gyro;
+	// Tracking state 
+	//m_relation_history* slam_relation_history = nullptr;
+	//m_ff_vec3_f32* ff_gyro = nullptr;
 
-	// Eye State
-	bool eye_feature_enabled;
-	bool face_feature_enabled;
-
+#if SUPPORT_EYE_TRACKING
+	bool eye_feature_enabled = true;
 	psvr2_et_data et_data;
+#endif
+
+#if SUPPORT_FACE_TRACKING
+	bool face_feature_enabled = true;
+#endif
 };
 
 enum psvr2_hmd_input_name

@@ -243,7 +243,6 @@ static int test_wrapped_device(const char* device_name)
 }
 #endif
 
-
 bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 {
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
@@ -633,6 +632,7 @@ static void* psvr2_eye_tracking_control_thread(void* usrptr)
 	return NULL;
 }
 
+#if SUPPORT_EYE_TRACKING
 void psvr2_free_et_data(psvr2_hmd* hmd)
 {
 	//u_var_remove_root(&hmd->et_data);
@@ -645,7 +645,7 @@ void psvr2_free_et_data(psvr2_hmd* hmd)
 
 int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 {
-	int res;
+	int res = 0;
 
 	// Gaze endpoint
 	hmd->gaze_xfer = libusb_alloc_transfer(0);
@@ -669,13 +669,15 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 	}
 	hmd->usb_active_xfers++;
 
-	//m_relation_history_create(&hmd->et_data.gaze_relation_history);
+#if 0
+	m_relation_history_create(&hmd->et_data.gaze_relation_history);
 
 	if(hmd->et_data.gaze_relation_history == NULL)
 	{
 		//PSVR2_ERROR(hmd, "Could not create relation history");
 		return -1;
 	}
+#endif
 
 #if 0
 	res = os_thread_helper_init(&hmd->et_data.eye_tracking_thread);
@@ -803,6 +805,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	return 0;
 }
+#endif // SUPPORT_EYE_TRACKING
 
 #if SUPPORT_FACE_TRACKING
 xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facial_expression_type, int64_t at_timestamp_ns, xrt_facial_expression_set* out_value)
@@ -974,11 +977,14 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 #endif
 
 uint8_t status_buf[USB_STATUS_XFER_SIZE] = { 0 };
-uint8_t recv_buf[NUM_CAM_XFERS][USB_CAM_MODE10_XFER_SIZE] = { 0 };
 uint8_t slam_buf[USB_SLAM_XFER_SIZE] = { 0 };
 uint8_t led_detector_buf[USB_LD_XFER_SIZE] = { 0 };
 uint8_t relocalizer_buf[USB_RP_XFER_SIZE] = { 0 };
 uint8_t vd_buf[USB_VD_XFER_SIZE] = { 0 };
+
+#if SUPPORT_PSVR2_CAMERAS
+uint8_t recv_buf[NUM_CAM_XFERS][USB_CAM_MODE10_XFER_SIZE] = { 0 };
+#endif
 
 bool psvr2_usb_start(psvr2_hmd* hmd)
 {
@@ -1007,13 +1013,12 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	}
 	hmd->usb_active_xfers++;
 
-	// Camera data
+#if SUPPORT_PSVR2_CAMERAS
 	hmd->camera_enable = true;
 	hmd->camera_mode = PSVR2_CAMERA_MODE_10;
 
 	set_camera_mode(hmd, hmd->camera_mode);
 	
-#if 0
 	for(int i = 0; i < NUM_CAM_XFERS; i++)
 	{
 		hmd->camera_xfers[i] = libusb_alloc_transfer(0);
