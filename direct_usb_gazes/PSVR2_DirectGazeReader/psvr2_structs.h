@@ -1,13 +1,25 @@
 #ifndef PSVR2_STRUCTS_H
 #define PSVR2_STRUCTS_H
 
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
 #include <libusb.h>
 
+#define SUPPORT_EYE_TRACKING 0
+#define SUPPORT_FACE_TRACKING (SUPPORT_EYE_TRACKING && 0)
+
+#define NUM_CAM_XFERS 1
+
+//#define PSVR2_TRACE(p, ...) U_LOG_XDEV_IFL_T(&p->base, p->log_level, __VA_ARGS__)
+//#define PSVR2_TRACE_HEX(p, data, data_size) U_LOG_XDEV_IFL_T_HEX(&p->base, p->log_level, data, data_size)
+//#define PSVR2_DEBUG(p, ...) U_LOG_XDEV_IFL_D(&p->base, p->log_level, __VA_ARGS__)
+//#define PSVR2_DEBUG_HEX(p, data, data_size) U_LOG_XDEV_IFL_D_HEX(&p->base, p->log_level, data, data_size)
+//#define PSVR2_WARN(p, ...) U_LOG_XDEV_IFL_W(&p->base, p->log_level, __VA_ARGS__)
+//#define PSVR2_ERROR(p, ...) U_LOG_XDEV_IFL_E(&p->base, p->log_level, __VA_ARGS__)
+
+#define TIMESTAMP_SAMPLES 100
 
 #define PSVR2_SLAM_INTERFACE 3
 #define PSVR2_SLAM_ENDPOINT 3
@@ -256,17 +268,6 @@ struct psvr2_gaze_state
 	psvr2_gaze_packet gaze_data_;
 };
 
-#define NUM_CAM_XFERS 1
-
-#define PSVR2_TRACE(p, ...) U_LOG_XDEV_IFL_T(&p->base, p->log_level, __VA_ARGS__)
-#define PSVR2_TRACE_HEX(p, data, data_size) U_LOG_XDEV_IFL_T_HEX(&p->base, p->log_level, data, data_size)
-#define PSVR2_DEBUG(p, ...) U_LOG_XDEV_IFL_D(&p->base, p->log_level, __VA_ARGS__)
-#define PSVR2_DEBUG_HEX(p, data, data_size) U_LOG_XDEV_IFL_D_HEX(&p->base, p->log_level, data, data_size)
-#define PSVR2_WARN(p, ...) U_LOG_XDEV_IFL_W(&p->base, p->log_level, __VA_ARGS__)
-#define PSVR2_ERROR(p, ...) U_LOG_XDEV_IFL_E(&p->base, p->log_level, __VA_ARGS__)
-
-#define TIMESTAMP_SAMPLES 100
-
 struct psvr2_et_data
 {
 	//struct os_thread_helper eye_tracking_thread;
@@ -298,14 +299,14 @@ struct psvr2_et_data
 
 struct psvr2_hmd
 {
-	//struct xrt_device base;
-	//struct xrt_pose pose;
+	//xrt_device base;
+	//xrt_pose pose;
 
 	enum u_logging_level log_level;
 
-	//struct os_mutex data_lock;
+	//os_mutex data_lock;
 
-	/* Device status */
+	// Device status
 	uint8_t dprx_status;               //< DisplayPort receiver status
 
 	//xrt_atomic_s32_t proximity_sensor; //< Atomic state for whether the proximity sensor is triggered
@@ -318,34 +319,34 @@ struct psvr2_hmd
 	bool camera_enable;                 //< Whether the camera is enabled
 	enum psvr2_camera_mode camera_mode; //< The current camera mode
 
-	//struct u_var_button camera_enable_btn;
-	//struct u_var_button camera_mode_btn;
+	//u_var_button camera_enable_btn;
+	//u_var_button camera_mode_btn;
 
-	//struct u_var_button brightness_btn;
+	//u_var_button brightness_btn;
 	float brightness;
 
 	/* IMU input data */
 	uint32_t last_imu_vts_us;   //< Last VTS timestamp, in microseconds
 	uint16_t last_imu_ts;       //< Last IMU timestamp, in microseconds
 
-	//struct xrt_vec3 last_gyro;  //< Last gyro reading, in rad/s
-	//struct xrt_vec3 last_accel; //< Last accel reading, in m/s²
+	//xrt_vec3 last_gyro;  //< Last gyro reading, in rad/s
+	//xrt_vec3 last_accel; //< Last accel reading, in m/s²
 
 	/* SLAM input data */
 	uint32_t last_slam_vts_us;      //< Last slam timestamp, in microseconds
-	//struct xrt_pose last_slam_pose; //< Last SLAM pose reading
+	//xrt_pose last_slam_pose; //< Last SLAM pose reading
 
-	//struct xrt_pose slam_correction_pose;
-	//struct u_var_button slam_correction_set_btn;
-	//struct u_var_button slam_correction_reset_btn;
+	//xrt_pose slam_correction_pose;
+	//u_var_button slam_correction_set_btn;
+	//u_var_button slam_correction_reset_btn;
 
-	//struct xrt_pose T_imu_head; //< Constant transform from SLAM tracker pose to head pose
+	//xrt_pose T_imu_head; //< Constant transform from SLAM tracker pose to head pose
 
 	/* Display parameters */
-	//struct u_device_simple_info info;
+	//u_device_simple_info info;
 
 	/* Camera debug sinks */
-	//struct u_sink_debug debug_sinks[4];
+	//u_sink_debug debug_sinks[4];
 
 	/* USB communication */
 	libusb_context* ctx;
@@ -356,20 +357,26 @@ struct psvr2_hmd
 	int usb_complete;
 	int usb_active_xfers;
 
-	/* Status report */
-	struct libusb_transfer* status_xfer;
-	/* SLAM (bulk) transfer */
-	struct libusb_transfer* slam_xfer;
-	/* Camera (bulk) transfers */
-	struct libusb_transfer* camera_xfers[NUM_CAM_XFERS];
-	/* LD EP9 (bulk) transfer */
-	struct libusb_transfer* led_detector_xfer;
-	/* RP EP10 (bulk) transfer */
-	struct libusb_transfer* relocalizer_xfer;
-	/* VD EP11 (bulk) transfer */
-	struct libusb_transfer* vd_xfer;
-	/* Gaze transfer */
-	struct libusb_transfer* gaze_xfer;
+	// Status report
+	libusb_transfer* status_xfer;
+
+	// SLAM (bulk) transfer
+	libusb_transfer* slam_xfer;
+
+	// Camera (bulk) transfers
+	libusb_transfer* camera_xfers[NUM_CAM_XFERS];
+
+	// LD EP9 (bulk) transfer
+	libusb_transfer* led_detector_xfer;
+
+	// RP EP10 (bulk) transfer
+	libusb_transfer* relocalizer_xfer;
+
+	// VD EP11 (bulk) transfer
+	libusb_transfer* vd_xfer;
+
+	// Gaze transfer
+	libusb_transfer* gaze_xfer;
 
 	/* Distortion calibration parameters, to be used with
 	 * psvr2_compute_distortion_asymmetric. Very specific to
@@ -388,14 +395,14 @@ struct psvr2_hmd
 	//time_duration_ns hw2mono_imu;
 
 	/* Tracking state */
-	struct m_relation_history* slam_relation_history;
-	struct m_ff_vec3_f32* ff_gyro;
+	//m_relation_history* slam_relation_history;
+	//m_ff_vec3_f32* ff_gyro;
 
-	/* Eye State */
+	// Eye State
 	bool eye_feature_enabled;
 	bool face_feature_enabled;
 
-	struct psvr2_et_data et_data;
+	psvr2_et_data et_data;
 };
 
 enum psvr2_hmd_input_name
@@ -412,15 +419,16 @@ enum psvr2_hmd_input_name
 //void psvr2_compute_distortion_asymmetric(float* calibration, xrt_uv_triplet* distCoords, int eEye, float fU, float fV);
 
 bool psvr2_usb_xfer_continue(libusb_transfer* xfer, const char* type);
-
 bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint8_t* pkt_data, uint32_t pkt_len);
 
+#if SUPPORT_EYE_TRACKING
 void psvr2_free_et_data(psvr2_hmd* hmd);
-
 int psvr2_start_gaze_tracking(psvr2_hmd* hmd);
+#endif
 
-//xrt_result_t psvr2_get_face_tracking(xrt_device* xdev, enum xrt_input_name facial_expression_type,
-//	int64_t at_timestamp_ns, xrt_facial_expression_set* out_value);
+#if SUPPORT_FACE_TRACKING
+xrt_result_t psvr2_get_face_tracking(xrt_device* xdev, enum xrt_input_name facial_expression_type, int64_t at_timestamp_ns, xrt_facial_expression_set* out_value);
+#endif
 
 
 #endif
