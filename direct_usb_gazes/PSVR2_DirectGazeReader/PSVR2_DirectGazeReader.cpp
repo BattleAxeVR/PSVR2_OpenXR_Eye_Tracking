@@ -283,7 +283,7 @@ static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 
 	// handle status packet
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
-	//os_mutex_lock(&hmd->data_lock);
+	hmd->data_lock.lock();
 
 	if((size_t)xfer->actual_length >= sizeof(struct status_record_hdr))
 	{
@@ -293,7 +293,7 @@ static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 	}
 
 	libusb_submit_transfer(xfer);
-	//os_mutex_unlock(&hmd->data_lock);
+	hmd->data_lock.unlock();
 }
 
 static void LIBUSB_CALL slam_xfer_cb(struct libusb_transfer* xfer)
@@ -312,9 +312,9 @@ static void LIBUSB_CALL slam_xfer_cb(struct libusb_transfer* xfer)
 		//process_slam_record(hmd, xfer->buffer, xfer->actual_length);
 	}
 
-	//os_mutex_lock(&hmd->data_lock);
+	hmd->data_lock.lock();
 	libusb_submit_transfer(xfer);
-	//os_mutex_unlock(&hmd->data_lock);
+	hmd->data_lock.unlock();
 }
 
 static void LIBUSB_CALL dump_xfer_cb(struct libusb_transfer* xfer)
@@ -347,9 +347,9 @@ static void LIBUSB_CALL dump_xfer_cb(struct libusb_transfer* xfer)
 	//PSVR2_TRACE(hmd, "%s xfer size %u", name, xfer->actual_length);
 	//PSVR2_TRACE_HEX(hmd, xfer->buffer, xfer->actual_length);
 
-	//os_mutex_lock(&hmd->data_lock);
+	hmd->data_lock.lock();
 	libusb_submit_transfer(xfer);
-	///os_mutex_unlock(&hmd->data_lock);
+	hmd->data_lock.unlock();
 }
 
 bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint8_t* pkt_data, uint32_t pkt_len)
@@ -429,14 +429,14 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	hmd->et_data.last_remote_report_sample_time_us = remote_sample_timestamp_us;
 
-#if 0
-
-	//timepoint_ns last_timestamp_ns = hmd->et_data.last_remote_report_sample_time_ns;
-	//timepoint_ns timestamp_ns = hmd->et_data.last_remote_report_sample_time_ns + ((int64_t)remote_sample_timestamp_delta_us * OS_NS_PER_USEC);
+	timepoint_ns last_timestamp_ns = hmd->et_data.last_remote_report_sample_time_ns;
+	int64_t NS_PER_USEC = 1000;
+	timepoint_ns timestamp_ns = hmd->et_data.last_remote_report_sample_time_ns + ((int64_t)remote_sample_timestamp_delta_us * NS_PER_USEC);
 
 	hmd->et_data.last_remote_report_sample_time_ns = timestamp_ns;
+	hmd->et_data.data_mutex.lock();
 
-	//os_mutex_lock(&hmd->et_data.data_mutex);
+#if 0
 
 	for(int i = 0; i < 2; i++)
 	{
@@ -534,7 +534,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 	hmd->et_data.unk_float_5_valid = gaze_state.packet_data.unk_bool_10;
 	hmd->et_data.unk_float_5 = gaze_state.packet_data.unk_float_5;
 
-	//os_mutex_unlock(&hmd->et_data.data_mutex);
+	hmd->et_data.data_mutex.unlock();
 
 	// update the gaze direction
 	float look_x_dir = atan(hmd->et_data.combined.filtered_gaze_direction.x);
@@ -816,7 +816,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 
 	psvr2_hmd* hmd = psvr2_hmd(xdev);
 
-	os_mutex_lock(&hmd->et_data.data_mutex);
+	hmd->et_data.data_mutex.lock();
 
 	// @todo: store a history of facial sample data to be able to interpolate/extrapolate to at_timestamp_ns
 	//        for now, let's just always use the latest data
@@ -970,7 +970,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 	default: result = XRT_ERROR_INPUT_UNSUPPORTED; break;
 	}
 
-	os_mutex_unlock(&hmd->et_data.data_mutex);
+	hmd->et_data.data_mutex.unlock();
 
 	return result;
 }
