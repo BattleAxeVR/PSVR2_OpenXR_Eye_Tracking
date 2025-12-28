@@ -224,8 +224,8 @@ static int test_wrapped_device(const char *device_name)
 
 int main(int argc, char *argv[])
 {
-    const std::string welcome_str = "PSVR 2 Direct Gaze Reader\n\n";
-    printf(welcome_str.c_str());
+	const std::string welcome_str = "PSVR 2 Direct Gaze Reader\n\n";
+	printf(welcome_str.c_str());
 
 	const char *device_name = NULL;
 	libusb_device **devs;
