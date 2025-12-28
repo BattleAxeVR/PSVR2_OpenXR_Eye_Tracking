@@ -64,7 +64,6 @@
 typedef uint32_t uint;
 typedef uint64_t timepoint_ns;
 
-
 struct imu_record
 {
 	uint vts_us;
@@ -298,7 +297,7 @@ struct psvr2_et_data
 	//! Whether the eye tracking enable command has been sent
 	bool enabled = false;
 
-	//m_relation_history* gaze_relation_history;
+	//m_relation_history* gaze_relation_history = nullptr;
 	
 	psvr2_per_eye_gaze gazes_[NUM_EYES];
 	psvr2_combined_gaze combined_gaze_;
@@ -342,6 +341,8 @@ struct psvr2_hmd
 	//u_var_button camera_enable_btn;
 	//u_var_button camera_mode_btn;
 
+	// Camera (bulk) transfers
+	libusb_transfer* camera_xfers[NUM_CAM_XFERS] = {};
 #endif
 
 	//u_var_button brightness_btn;
@@ -382,9 +383,6 @@ struct psvr2_hmd
 
 	// SLAM (bulk) transfer
 	libusb_transfer* slam_xfer = nullptr;
-
-	// Camera (bulk) transfers
-	libusb_transfer* camera_xfers[NUM_CAM_XFERS] = {};
 
 	// LD EP9 (bulk) transfer
 	libusb_transfer* led_detector_xfer = nullptr;

@@ -375,6 +375,7 @@ bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint
 	return true;
 }
 
+#if SUPPORT_PSVR2_CAMERAS
 struct camera_cmd
 {
 	uint data[2] = { 0 };
@@ -391,6 +392,7 @@ bool set_camera_mode(psvr2_hmd* hmd, enum psvr2_camera_mode mode)
 
 	return send_psvr2_control(hmd, PSVR2_REPORT_ID_SET_CAMERA_MODE, 0x1, (uint8_t*)(&cmd), sizeof(cmd));
 }
+#endif
 
 #if SUPPORT_EYE_TRACKING
 
