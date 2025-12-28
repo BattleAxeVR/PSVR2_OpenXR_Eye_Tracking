@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="PSVR2_DirectGazeReader.vcxproj" />
+  <Project Path="PSVR2_DirectGazeReader.vcxproj" Id="70231746-eeb8-46f6-b037-e74ab820d5f2" />
 </Solution>
