@@ -19,6 +19,14 @@
 #define NUM_EYES 2
 #endif
 
+#ifndef LEFT
+#define LEFT 0
+#endif
+
+#ifndef RIGHT
+#define RIGHT 1
+#endif
+
 #define NUM_CAM_XFERS 1
 
 #define TIMESTAMP_SAMPLES 100

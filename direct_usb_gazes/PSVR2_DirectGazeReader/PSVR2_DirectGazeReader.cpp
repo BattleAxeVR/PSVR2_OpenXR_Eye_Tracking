@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string>
 #include <libusb.h>
+#include <algorithm>
 
 #include "psvr2_structs.h"
 
@@ -354,8 +355,7 @@ static void LIBUSB_CALL dump_xfer_cb(struct libusb_transfer* xfer)
 
 bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint8_t* pkt_data, uint32_t pkt_len)
 {
-	struct sie_ctrl_pkt pkt;
-	int ret;
+	sie_ctrl_pkt pkt = {};
 
 	assert(pkt_len <= sizeof(pkt.data));
 
@@ -364,7 +364,7 @@ bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint
 	pkt.len = pkt_len;
 	memcpy(pkt.data, pkt_data, pkt_len);
 
-	ret = libusb_control_transfer(hmd->dev, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_ENDPOINT, 0x9, report_id, 0x0, (unsigned char*)&pkt, pkt_len + 8, 100);
+	int ret = libusb_control_transfer(hmd->dev, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_ENDPOINT, 0x9, report_id, 0x0, (unsigned char*)&pkt, pkt_len + 8, 100);
 
 	if(ret < 0)
 	{
@@ -400,8 +400,7 @@ uint8_t gaze_buf[USB_GAZE_XFER_SIZE] = { 0 };
 
 static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 {
-
-	psvr2_gaze_state gaze_state;
+	psvr2_gaze_state gaze_state = {};
 
 	if(bytes_read < sizeof(gaze_state))
 	{
@@ -436,74 +435,79 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 	hmd->et_data.last_remote_report_sample_time_ns = timestamp_ns;
 	hmd->et_data.data_mutex.lock();
 
-#if 0
-
-	for(int i = 0; i < 2; i++)
+	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
-		pkt_eye_gaze* eye_gaze_data = i == 0 ? &gaze_state.packet_data.left : &gaze_state.packet_data.right;
+		psvr2_per_eye_gaze& eye_gaze_data = (eye == LEFT) ? gaze_state.gaze_data_.left_gaze_ : gaze_state.gaze_data_.right_gaze_;
 
-		xrt_vec3 gaze_point = eye_gaze_data->gaze_point_mm;
-		math_vec3_scalar_mul(1.0 / 1000.0, &gaze_point); // to mm
+		vec3 gaze_point = eye_gaze_data.gaze_point;
+
+		// convert to millimeters
+		gaze_point.x *= 0.001f;
+		gaze_point.y *= 0.001f;
+		gaze_point.z *= 0.001f;
+
+		// fix reference frame / coordinates
 		gaze_point.x *= -1;
 		gaze_point.z *= -1;
 
-		xrt_vec3 gaze_direction = eye_gaze_data->gaze_direction;
-
-		// flip to correct coordinate space
+		vec3 gaze_direction = eye_gaze_data.gaze_direction;
 		gaze_direction.x *= -1;
 		gaze_direction.z *= -1;
 
-		psvr2_et_eye_data* eye_data = &hmd->et_data.eyes[i];
+		psvr2_per_eye_gaze& gaze = hmd->et_data.gazes_[eye];
 
-		if(eye_gaze_data->blink_valid && eye_data->blink != eye_data->blink_interp)
+#if 0
+		if(gaze.is_blink_state_valid && (gaze.blink != gaze.blink_interp))
 		{
-			// amount of time needed to blink, this is technically higher what it should be (100ms on the
-			// low end for *whole* blink, closed and open, and this value is for reaching one of those
-			// extremes), but we want this to feel "smoothed" out for users, since we only get binary blink
-			// data from HMD, and apps won't necessarily smooth it out for us, and this number "feels good"
 			const timepoint_ns blink_time_ns = U_TIME_1MS_IN_NS * 100LLU;
 
 			// amount of blink movement occurred since last tick
 			double blink_delta = (double)(timestamp_ns - last_timestamp_ns) / (double)blink_time_ns;
 
 			// direction interp is moving
-			float dir = eye_gaze_data->blink ? 1 : -1;
+			float dir = gaze.blink_state ? 1 : -1;
 
 			eye_data->blink_interp += dir * blink_delta;
-			eye_data->blink_interp = CLAMP(eye_data->blink_interp, 0, 1);
+			eye_data->blink_interp = std::clamp(eye_data->blink_interp, 0, 1);
 		}
+#endif
 
+#if 0
 		if(eye_gaze_data->gaze_direction_valid)
 		{
 			m_filter_euro_vec3_run(&eye_data->gaze_direction_filter, timestamp_ns, &gaze_direction, &eye_data->filtered_gaze_direction);
 			math_vec3_normalize(&eye_data->filtered_gaze_direction);
 		}
 
-		eye_data->blink = eye_gaze_data->blink;
-		eye_data->blink_valid = eye_gaze_data->blink_valid;
-		eye_data->gaze_direction = gaze_direction;
-		eye_data->gaze_direction_valid = eye_gaze_data->gaze_direction_valid;
-		eye_data->gaze_point = gaze_point;
-		eye_data->gaze_point_valid = eye_gaze_data->gaze_point_mm_valid;
-		eye_data->pupil_diameter = eye_gaze_data->pupil_diameter_mm / 1000.0f; // to m
-		eye_data->pupil_diameter_valid = eye_gaze_data->pupil_diameter_valid;
-		eye_data->unk_float_2_valid = eye_gaze_data->unk_bool_2;
-		eye_data->unk_float_2 = eye_gaze_data->unk_float_2;
-		eye_data->unk_float_4_valid = eye_gaze_data->unk_bool_3;
-		eye_data->unk_float_4 = eye_gaze_data->unk_float_4;
+		gaze.blink = eye_gaze_data->blink;
+		gaze.blink_valid = eye_gaze_data->blink_valid;
+		gaze.gaze_direction = gaze_direction;
+		gaze.gaze_direction_valid = eye_gaze_data->gaze_direction_valid;
+		gaze.gaze_point = gaze_point;
+		gaze.gaze_point_valid = eye_gaze_data->gaze_point_mm_valid;
+		gaze.pupil_diameter = eye_gaze_data->pupil_diameter_mm / 1000.0f; // to m
+		gaze.pupil_diameter_valid = eye_gaze_data->pupil_diameter_valid;
+#endif
 	}
 
 	{
+
+#if 0
 		pkt_gaze_combined* combined = &gaze_state.packet_data.combined;
 
 		xrt_vec3 gaze_direction = combined->normalized_gaze;
+
 		// flip to correct coordinate space
 		gaze_direction.x *= -1;
 		gaze_direction.z *= -1;
 
-		xrt_vec3 gaze_point = combined->gaze_point_3d;
-		math_vec3_scalar_mul(1.0 / 1000.0, &gaze_point); // to mm
-		// flip to correct coordinate space
+		vec3 gaze_point = combined->gaze_point_3d;
+
+		// convert to millimeters
+		gaze_point.x *= 0.001f;
+		gaze_point.y *= 0.001f;
+		gaze_point.z *= 0.001f;
+
 		gaze_point.x *= -1;
 		gaze_point.z *= -1;
 
@@ -520,25 +524,15 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		eye_data->gaze_point_valid = combined->gaze_point_valid;
 		eye_data->gaze_point = gaze_point;
 		eye_data->is_valid = combined->is_valid;
-		eye_data->unk_float_8_valid = combined->unk_bool_7;
-		eye_data->unk_float_8 = combined->unk_float_8;
-		eye_data->unk_float3_pair_valid = combined->unk_bool_9;
-		eye_data->unk_float_12 = combined->unk_float_12;
-		eye_data->unk_float_15 = combined->unk_float_15;
-		eye_data->unk_float_18 = combined->unk_float_18;
+#endif
 	}
-
-	hmd->et_data.unk_float_4_valid = gaze_state.packet_data.unk_bool_9;
-	hmd->et_data.unk_float_4 = gaze_state.packet_data.unk_float_4;
-
-	hmd->et_data.unk_float_5_valid = gaze_state.packet_data.unk_bool_10;
-	hmd->et_data.unk_float_5 = gaze_state.packet_data.unk_float_5;
 
 	hmd->et_data.data_mutex.unlock();
 
+#if 0
 	// update the gaze direction
-	float look_x_dir = atan(hmd->et_data.combined.filtered_gaze_direction.x);
-	float look_y_dir = atan(hmd->et_data.combined.filtered_gaze_direction.y);
+	float look_x_dir = atan(hmd->et_data.combined_gaze_.filtered_gaze_direction.x);
+	float look_y_dir = atan(hmd->et_data.combined_gaze_.filtered_gaze_direction.y);
 
 	xrt_space_relation gaze_relation = { 0 };
 
@@ -556,7 +550,10 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 			XRT_SPACE_RELATION_POSITION_VALID_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT | XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT;
 	}
 
-	m_relation_history_push(hmd->et_data.gaze_relation_history, &gaze_relation, timestamp_ns);
+	//m_relation_history_push(hmd->et_data.gaze_relation_history, &gaze_relation, timestamp_ns);
+#endif
+
+
 #endif
 }
 
@@ -589,31 +586,21 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 #endif
 }
 
+bool keep_running_eye_tracking_control_thread = true;
+
+using namespace std::chrono_literals;
+
 static void* psvr2_eye_tracking_control_thread(void* usrptr)
 {
 	bool success;
 	psvr2_hmd* hmd = (psvr2_hmd*)usrptr;
 
-	const char* thread_name = "PSVR2 Eye Tracking Control";
-
-	
-#if 1
-	//U_TRACE_SET_THREAD_NAME(thread_name);
-	//os_thread_helper_name(&hmd->et_data.eye_tracking_thread, thread_name);
-
-	//os_thread_helper_lock(&hmd->et_data.eye_tracking_thread);
-
-	bool is_thread_running = true; // os_thread_helper_is_running_locked(&hmd->et_data.eye_tracking_thread)
-
-	while(is_thread_running)
+	while(keep_running_eye_tracking_control_thread)
 	{
-		//os_thread_helper_unlock(&hmd->et_data.eye_tracking_thread);
-
 		bool enable = hmd->et_data.want_enabled || hmd->et_data.force_enable;
 
 		enum psvr2_gaze_stream_subcommand subcmd = enable ? PSVR2_GAZE_STREAM_SUBCMD_ENABLE : PSVR2_GAZE_STREAM_SUBCMD_DISABLE;
 
-		// send keepalive for et, lasts some amount of seconds, we send it regularly to keep it on
 		success = send_psvr2_control(hmd, PSVR2_REPORT_ID_SET_GAZE_STREAM, subcmd, NULL, 0);
 
 		if(!success)
@@ -624,25 +611,17 @@ static void* psvr2_eye_tracking_control_thread(void* usrptr)
 
 		hmd->et_data.enabled = enable;
 
-		//os_nanosleep(U_TIME_1S_IN_NS);
-
-		//os_thread_helper_lock(&hmd->et_data.eye_tracking_thread);
+		std::this_thread::sleep_for(1s);
 	}
 
-	//os_thread_helper_unlock(&hmd->et_data.eye_tracking_thread);
-#endif
 	return NULL;
 }
 
 #if SUPPORT_EYE_TRACKING
 void psvr2_free_et_data(psvr2_hmd* hmd)
 {
-	//u_var_remove_root(&hmd->et_data);
-
-	// stop the ET thread
-	//os_thread_helper_stop_and_wait(&hmd->et_data.eye_tracking_thread);
-
-	//m_relation_history_destroy(&hmd->et_data.gaze_relation_history);
+	keep_running_eye_tracking_control_thread = false;
+	hmd->usb_thread.join();
 }
 
 int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
@@ -725,8 +704,6 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		return -1;
 	}
 #endif
-
-	//os_mutex_init(&hmd->et_data.data_mutex);
 
 	//m_filter_euro_vec3_init(&hmd->et_data.combined.gaze_direction_filter, M_EURO_FILTER_EYE_TRACKING_FCMIN, M_EURO_FILTER_EYE_TRACKING_FCMIN_D, M_EURO_FILTER_EYE_TRACKING_BETA);
 
@@ -828,32 +805,32 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 	float blink[2];
 	struct xrt_vec3 gaze_directions[2];
 
-	for(int i = 0; i < 2; i++)
+	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
-		struct psvr2_et_eye_data* eye = &hmd->et_data.eyes[i];
+		psvr2_et_eye_data& gaze = hmd->et_data.eyes[eye];
 
-		confidence[i] = 1.0f;
-		blink[i] = (float)eye->blink_interp;
-		gaze_directions[i] = eye->filtered_gaze_direction;
+		confidence[eye] = 1.0f;
+		blink[eye] = (float)eye->blink_interp;
+		gaze_directions[eye] = eye->filtered_gaze_direction;
 
 		if(!eye->blink_valid)
 		{
-			confidence[i] *= 0.25f;
+			confidence[eye] *= 0.25f;
 		}
 
 		if(!eye->gaze_direction_valid)
 		{
-			confidence[i] *= 0.66f;
+			confidence[eye] *= 0.66f;
 
 			// if the per-eye gaze dir isn't valid, pull from the combined data
-			gaze_directions[i] = hmd->et_data.combined.filtered_gaze_direction;
+			gaze_directions[eye] = hmd->et_data.combined.filtered_gaze_direction;
 
 			// no per eye or combined gaze data :c
 			// we'll still set it based on the combined gaze data, since that *more frequently* has
 			// more up to date info (since it will still work with only one eye open)
 			if(!hmd->et_data.combined.gaze_direction_valid)
 			{
-				confidence[i] *= 0.66f;
+				confidence[eye] *= 0.66f;
 				gaze_directions_valid = false;
 			}
 		}
@@ -974,9 +951,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 
 	return result;
 }
-#endif
-
-#endif
+#endif // SUPPORT_FACE_TRACKING
 
 uint8_t status_buf[USB_STATUS_XFER_SIZE] = { 0 };
 uint8_t slam_buf[USB_SLAM_XFER_SIZE] = { 0 };
