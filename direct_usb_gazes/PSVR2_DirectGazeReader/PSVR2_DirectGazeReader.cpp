@@ -239,6 +239,157 @@ static int test_wrapped_device(const char* device_name)
 	return 1;
 }
 
+bool psvr2_usb_start(psvr2_hmd* hmd)
+{
+	bool result = false;
+	int res;
+
+	os_thread_helper_lock(&hmd->usb_thread);
+
+	/* Status endpoint */
+	hmd->status_xfer = libusb_alloc_transfer(0);
+	if(hmd->status_xfer == NULL)
+	{
+		PSVR2_ERROR(hmd, "Could not alloc USB transfer for status reports");
+		goto out;
+	}
+	uint8_t* status_buf = malloc(USB_STATUS_XFER_SIZE);
+	libusb_fill_interrupt_transfer(hmd->status_xfer, hmd->dev, LIBUSB_ENDPOINT_IN | PSVR2_STATUS_ENDPOINT,
+		status_buf, USB_STATUS_XFER_SIZE, status_xfer_cb, hmd, 0);
+	hmd->status_xfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+
+	res = libusb_submit_transfer(hmd->status_xfer);
+	if(res < 0)
+	{
+		PSVR2_ERROR(hmd, "Could not submit USB transfer for status reports");
+		goto out;
+	}
+	hmd->usb_active_xfers++;
+
+	/* Camera data */
+	hmd->camera_enable = true;
+	hmd->camera_mode = PSVR2_CAMERA_MODE_10;
+	set_camera_mode(hmd, hmd->camera_mode);
+
+	for(int i = 0; i < NUM_CAM_XFERS; i++)
+	{
+		hmd->camera_xfers[i] = libusb_alloc_transfer(0);
+		if(hmd->camera_xfers[i] == NULL)
+		{
+			PSVR2_ERROR(hmd, "Could not alloc USB transfer %d for camera data", i);
+			goto out;
+		}
+
+		uint8_t* recv_buf = malloc(USB_CAM_MODE10_XFER_SIZE);
+
+		libusb_fill_bulk_transfer(hmd->camera_xfers[i], hmd->dev, LIBUSB_ENDPOINT_IN | PSVR2_CAMERA_ENDPOINT,
+			recv_buf, USB_CAM_MODE10_XFER_SIZE, img_xfer_cb, hmd, 0);
+		hmd->camera_xfers[i]->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+
+		res = libusb_submit_transfer(hmd->camera_xfers[i]);
+		if(res < 0)
+		{
+			PSVR2_ERROR(hmd, "Could not submit USB transfer %d for camera data", i);
+			goto out;
+		}
+		hmd->usb_active_xfers++;
+	}
+
+	/* SLAM endpoint */
+	hmd->slam_xfer = libusb_alloc_transfer(0);
+	if(hmd->slam_xfer == NULL)
+	{
+		PSVR2_ERROR(hmd, "Could not alloc USB transfer for SLAM data");
+		goto out;
+	}
+	uint8_t* slam_buf = malloc(USB_SLAM_XFER_SIZE);
+	libusb_fill_bulk_transfer(hmd->slam_xfer, hmd->dev, LIBUSB_ENDPOINT_IN | PSVR2_SLAM_ENDPOINT, slam_buf,
+		USB_SLAM_XFER_SIZE, slam_xfer_cb, hmd, 0);
+	hmd->slam_xfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+
+	res = libusb_submit_transfer(hmd->slam_xfer);
+	if(res < 0)
+	{
+		PSVR2_ERROR(hmd, "Could not submit USB transfer for SLAM data");
+		goto out;
+	}
+	hmd->usb_active_xfers++;
+
+	/* LD endpoint */
+	hmd->led_detector_xfer = libusb_alloc_transfer(0);
+	if(hmd->led_detector_xfer == NULL)
+	{
+		PSVR2_ERROR(hmd, "Could not alloc USB transfer for LED Detector data");
+		goto out;
+	}
+	uint8_t* led_detector_buf = malloc(USB_LD_XFER_SIZE);
+	libusb_fill_bulk_transfer(hmd->led_detector_xfer, hmd->dev, LIBUSB_ENDPOINT_IN | PSVR2_LD_ENDPOINT,
+		led_detector_buf, USB_LD_XFER_SIZE, dump_xfer_cb, hmd, 0);
+	hmd->led_detector_xfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+
+	res = libusb_submit_transfer(hmd->led_detector_xfer);
+	if(res < 0)
+	{
+		PSVR2_ERROR(hmd, "Could not submit USB transfer for LED Detector data");
+		goto out;
+	}
+	hmd->usb_active_xfers++;
+
+	/* RP endpoint */
+	hmd->relocalizer_xfer = libusb_alloc_transfer(0);
+	if(hmd->relocalizer_xfer == NULL)
+	{
+		PSVR2_ERROR(hmd, "Could not alloc USB transfer for RP data");
+		goto out;
+	}
+	uint8_t* relocalizer_buf = malloc(USB_RP_XFER_SIZE);
+	libusb_fill_bulk_transfer(hmd->relocalizer_xfer, hmd->dev, LIBUSB_ENDPOINT_IN | PSVR2_RP_ENDPOINT,
+		relocalizer_buf, USB_RP_XFER_SIZE, dump_xfer_cb, hmd, 0);
+	hmd->relocalizer_xfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+
+	res = libusb_submit_transfer(hmd->relocalizer_xfer);
+	if(res < 0)
+	{
+		PSVR2_ERROR(hmd, "Could not submit USB transfer for RP data");
+		goto out;
+	}
+	hmd->usb_active_xfers++;
+
+	/* VD endpoint */
+	hmd->vd_xfer = libusb_alloc_transfer(0);
+	if(hmd->vd_xfer == NULL)
+	{
+		PSVR2_ERROR(hmd, "Could not alloc USB transfer for VD data");
+		goto out;
+	}
+	uint8_t* vd_buf = malloc(USB_VD_XFER_SIZE);
+	libusb_fill_bulk_transfer(hmd->vd_xfer, hmd->dev, LIBUSB_ENDPOINT_IN | PSVR2_VD_ENDPOINT, vd_buf,
+		USB_VD_XFER_SIZE, dump_xfer_cb, hmd, 0);
+	hmd->vd_xfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+
+	res = libusb_submit_transfer(hmd->vd_xfer);
+	if(res < 0)
+	{
+		PSVR2_ERROR(hmd, "Could not submit USB transfer for VD data");
+		goto out;
+	}
+	hmd->usb_active_xfers++;
+
+	res = psvr2_start_gaze_tracking(hmd);
+	if(res < 0)
+	{
+		PSVR2_ERROR(hmd, "Could not start gaze tracking");
+		goto out;
+	}
+
+	result = true;
+
+out:
+	os_thread_helper_unlock(&hmd->usb_thread);
+	return result;
+}
+
+
 int main(int argc, char* argv[])
 {
 	const std::string welcome_str = "PSVR 2 Direct Gaze Reader\n\n";
