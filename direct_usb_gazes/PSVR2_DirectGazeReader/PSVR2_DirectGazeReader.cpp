@@ -395,8 +395,11 @@ bool set_camera_mode(psvr2_hmd* hmd, enum psvr2_camera_mode mode)
 
 #if SUPPORT_EYE_TRACKING
 
+uint8_t gaze_buf[USB_GAZE_XFER_SIZE] = { 0 };
+
 static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 {
+
 	psvr2_gaze_state gaze_state;
 
 	if(bytes_read < sizeof(gaze_state))
@@ -425,6 +428,8 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	hmd->et_data.last_remote_report_sample_time_us = remote_sample_timestamp_us;
 
+#if 0
+
 	//timepoint_ns last_timestamp_ns = hmd->et_data.last_remote_report_sample_time_ns;
 	//timepoint_ns timestamp_ns = hmd->et_data.last_remote_report_sample_time_ns + ((int64_t)remote_sample_timestamp_delta_us * OS_NS_PER_USEC);
 
@@ -434,14 +439,15 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	for(int i = 0; i < 2; i++)
 	{
-		struct pkt_eye_gaze* eye_gaze_data = i == 0 ? &gaze_state.packet_data.left : &gaze_state.packet_data.right;
+		pkt_eye_gaze* eye_gaze_data = i == 0 ? &gaze_state.packet_data.left : &gaze_state.packet_data.right;
 
-		struct xrt_vec3 gaze_point = eye_gaze_data->gaze_point_mm;
+		xrt_vec3 gaze_point = eye_gaze_data->gaze_point_mm;
 		math_vec3_scalar_mul(1.0 / 1000.0, &gaze_point); // to mm
 		gaze_point.x *= -1;
 		gaze_point.z *= -1;
 
-		struct xrt_vec3 gaze_direction = eye_gaze_data->gaze_direction;
+		xrt_vec3 gaze_direction = eye_gaze_data->gaze_direction;
+
 		// flip to correct coordinate space
 		gaze_direction.x *= -1;
 		gaze_direction.z *= -1;
@@ -489,7 +495,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 	{
 		pkt_gaze_combined* combined = &gaze_state.packet_data.combined;
 
-		struct xrt_vec3 gaze_direction = combined->normalized_gaze;
+		xrt_vec3 gaze_direction = combined->normalized_gaze;
 		// flip to correct coordinate space
 		gaze_direction.x *= -1;
 		gaze_direction.z *= -1;
@@ -546,11 +552,11 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 	if(hmd->et_data.combined.gaze_direction_valid)
 	{
 		gaze_relation.relation_flags =
-			XRT_SPACE_RELATION_POSITION_VALID_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT |
-			XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT;
+			XRT_SPACE_RELATION_POSITION_VALID_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT | XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT;
 	}
 
 	m_relation_history_push(hmd->et_data.gaze_relation_history, &gaze_relation, timestamp_ns);
+#endif
 }
 
 static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
@@ -562,7 +568,9 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 		return;
 	}
 
-	psvr2_hmd* hmd = xfer->user_data;
+	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
+
+#if 0
 
 	if((size_t)xfer->actual_length >= sizeof(pkt_gaze_state))
 	{
@@ -577,10 +585,12 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 	}
 
 	libusb_submit_transfer(xfer);
+#endif
 }
 
 static void* psvr2_eye_tracking_control_thread(void* usrptr)
 {
+#if 0
 	int result = 0;
 	bool success;
 	psvr2_hmd* hmd = (psvr2_hmd*)usrptr;
@@ -617,7 +627,7 @@ static void* psvr2_eye_tracking_control_thread(void* usrptr)
 	}
 
 	//os_thread_helper_unlock(&hmd->et_data.eye_tracking_thread);
-
+#endif
 	return NULL;
 }
 
@@ -630,8 +640,6 @@ void psvr2_free_et_data(psvr2_hmd* hmd)
 
 	//m_relation_history_destroy(&hmd->et_data.gaze_relation_history);
 }
-
-uint8_t gaze_buf[USB_GAZE_XFER_SIZE] = { 0 };
 
 int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 {
@@ -667,6 +675,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		return -1;
 	}
 
+#if 0
 	res = os_thread_helper_init(&hmd->et_data.eye_tracking_thread);
 
 	if(res < 0)
@@ -674,6 +683,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		//PSVR2_ERROR(hmd, "Could not create thread for eye tracking keepalive");
 		return -1;
 	}
+#endif
 
 #if SUPPORT_SONY_ET_CALIBRATION
 	FILE* eye_calib_file = u_file_open_file_in_config_dir_subpath("psvr2", "eye_calibration.bin", "r");
@@ -700,6 +710,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 	}
 #endif
 
+#if 0
 	res = os_thread_helper_start(&hmd->et_data.eye_tracking_thread, psvr2_eye_tracking_control_thread, hmd);
 
 	if(res < 0)
@@ -707,6 +718,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		//PSVR2_ERROR(hmd, "Could not start gaze keepalive thread");
 		return -1;
 	}
+#endif
 
 	//os_mutex_init(&hmd->et_data.data_mutex);
 
@@ -718,6 +730,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 	//u_var_add_bool(&hmd->et_data, &hmd->et_data.force_enable, "Force Enable Eye Tracking");
 	//u_var_add_bool(&hmd->et_data, &hmd->et_data.enabled, "Force Enable Enabled");
 
+#if 0
 	{
 		u_var_add_gui_header(&hmd->et_data, NULL, "Eye Tracker Data");
 		psvr2_et_data* et_data = &hmd->et_data;
@@ -731,7 +744,9 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		u_var_add_bool(et_data, &et_data->unk_float_5_valid, "unk_float_5 Valid");
 		u_var_add_f32(et_data, &et_data->unk_float_5, "unk_float_5");
 	}
+#endif
 
+#if 0
 	for(size_t i = 0; i < ARRAY_SIZE(hmd->et_data.eyes); i++)
 	{
 		u_var_add_gui_header(&hmd->et_data, NULL, i == 0 ? "Left Eye" : "Right Eye");
@@ -782,6 +797,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		u_var_add_vec3_f32(&hmd->et_data, &combined->unk_float_15, "unk_float_15");
 		u_var_add_vec3_f32(&hmd->et_data, &combined->unk_float_18, "unk_float_18");
 	}
+#endif
 
 	return 0;
 }

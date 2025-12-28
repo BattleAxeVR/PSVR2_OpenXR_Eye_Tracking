@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <libusb.h>
 
-#define SUPPORT_EYE_TRACKING 0
+#define SUPPORT_EYE_TRACKING 1
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
 #define SUPPORT_FACE_TRACKING (SUPPORT_EYE_TRACKING && 0)
 
