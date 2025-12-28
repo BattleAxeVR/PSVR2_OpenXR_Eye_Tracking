@@ -62,7 +62,6 @@
 
 typedef uint32_t uint;
 
-
 struct imu_record
 {
 	uint vts_us;
@@ -74,6 +73,15 @@ struct imu_record
 	uint16_t status;
 };
 
+struct slam_record
+{
+	uint32_t vts_us;  //< Timestamp of the SLAM, in microseconds
+	double pos[3];    //< 32-bit floats
+	double orient[4]; //< Orientation quaternion
+	uint8_t remainder[470];
+};
+
+#pragma pack(push, 1)
 struct imu_usb_record
 {
 	uint vts_us;
@@ -83,7 +91,7 @@ struct imu_usb_record
 	int16_t dp_line_cnt;
 	int16_t imu_ts_us;
 	int16_t status;
-};// __attribute__((packed));
+};
 
 struct status_record_hdr
 {
@@ -94,14 +102,6 @@ struct status_record_hdr
 	uint8_t ipd_dial_mm; //< 59 to 72mm
 
 	uint8_t remainder[26];
-};// __attribute__((packed));
-
-struct slam_record
-{
-	uint32_t vts_us;  //< Timestamp of the SLAM, in microseconds
-	double pos[3];    //< 32-bit floats
-	double orient[4]; //< Orientation quaternion
-	uint8_t remainder[470];
 };
 
 struct slam_usb_record
@@ -114,7 +114,7 @@ struct slam_usb_record
 	float pos[3];    //< 32-bit floats
 	float orient[4]; //< Orientation quaternion
 	uint8_t remainder[468];
-};// __attribute__((packed));
+};
 
 struct sie_ctrl_pkt
 {
@@ -122,7 +122,8 @@ struct sie_ctrl_pkt
 	int16_t subcmd;
 	uint len;
 	uint8_t data[512 - 8];
-};// __attribute__((packed));
+};
+#pragma pack(pop)
 
 enum psvr2_camera_mode
 {
@@ -162,7 +163,6 @@ enum psvr2_camera_mode
 	// right/bottom)
 	PSVR2_CAMERA_MODE_BOTTOM_SBS_BC4 = 0x10,
 };
-
 
 struct vec2
 {
