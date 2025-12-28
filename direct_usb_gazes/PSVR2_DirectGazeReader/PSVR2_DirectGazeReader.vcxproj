@@ -147,6 +147,9 @@
   <ItemGroup>
     <ClCompile Include="PSVR2_DirectGazeReader.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="psvr2_structs.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

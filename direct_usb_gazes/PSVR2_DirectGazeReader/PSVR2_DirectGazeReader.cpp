@@ -2,6 +2,8 @@
 #include <string>
 #include "libusb.h"
 
+#include "psvr2_structs.h"
+
 int verbose = 0;
 
 static void print_endpoint_comp(const struct libusb_ss_endpoint_companion_descriptor* ep_comp)
