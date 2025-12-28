@@ -365,8 +365,7 @@ bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint
 	pkt.len = pkt_len;
 	memcpy(pkt.data, pkt_data, pkt_len);
 
-	ret = libusb_control_transfer(hmd->dev, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_ENDPOINT, 0x9, report_id,
-		0x0, (unsigned char*)&pkt, pkt_len + 8, 100);
+	ret = libusb_control_transfer(hmd->dev, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_ENDPOINT, 0x9, report_id, 0x0, (unsigned char*)&pkt, pkt_len + 8, 100);
 
 	if(ret < 0)
 	{
@@ -676,7 +675,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		return -1;
 	}
 
-#if 0
+#if SUPPORT_SONY_ET_CALIBRATION
 	FILE* eye_calib_file = u_file_open_file_in_config_dir_subpath("psvr2", "eye_calibration.bin", "r");
 
 	if(eye_calib_file)
