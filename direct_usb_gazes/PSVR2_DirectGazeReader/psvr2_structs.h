@@ -177,13 +177,24 @@ struct vec3
 	float z = 0.0f;
 };
 
-enum psvr2_report_ids
+enum psvr2_report_id
 {
-	SET_PERIPHERAL_ = 0x8,
-	SET_CAMERA_MODE_ = 0xB,
-	SET_GAZE_STREAM_ = 0xC,
-	SET_GAZE_CALIBRATION_ = 0xD,
-	SET_BRIGHTNESS_ = 0x12,
+	PSVR2_REPORT_ID_SET_PERIPHERAL = 0x8,
+	PSVR2_REPORT_ID_SET_CAMERA_MODE = 0xB,
+	PSVR2_REPORT_ID_SET_GAZE_STREAM = 0xC,
+	PSVR2_REPORT_ID_SET_GAZE_USER_CALIBRATION = 0xD,
+	PSVR2_REPORT_ID_SET_BRIGHTNESS = 0x12,
+};
+
+enum psvr2_gaze_stream_subcommand
+{
+	PSVR2_GAZE_STREAM_SUBCMD_ENABLE = 0x01,
+	PSVR2_GAZE_STREAM_SUBCMD_DISABLE = 0x02,
+};
+
+enum psvr2_set_peripheral_subcommand
+{
+	PSVR2_SET_PERIPHERAL_SUBCMD_MOTOR = 0x01,
 };
 
 struct psvr2_per_eye_gaze

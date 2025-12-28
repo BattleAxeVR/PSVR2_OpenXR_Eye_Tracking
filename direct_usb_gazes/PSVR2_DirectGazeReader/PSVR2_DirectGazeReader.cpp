@@ -390,7 +390,7 @@ bool set_camera_mode(psvr2_hmd* hmd, enum psvr2_camera_mode mode)
 
 	//PSVR2_DEBUG(hmd, "Setting camera mode to 0x%x", mode);
 
-	return send_psvr2_control(hmd, SET_CAMERA_MODE_, 0x1, (uint8_t*)(&cmd), sizeof(cmd));
+	return send_psvr2_control(hmd, PSVR2_REPORT_ID_SET_CAMERA_MODE, 0x1, (uint8_t*)(&cmd), sizeof(cmd));
 }
 
 #if SUPPORT_EYE_TRACKING
@@ -590,19 +590,21 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 
 static void* psvr2_eye_tracking_control_thread(void* usrptr)
 {
-#if 0
-	int result = 0;
 	bool success;
 	psvr2_hmd* hmd = (psvr2_hmd*)usrptr;
 
 	const char* thread_name = "PSVR2 Eye Tracking Control";
 
+	
+#if 1
 	//U_TRACE_SET_THREAD_NAME(thread_name);
 	//os_thread_helper_name(&hmd->et_data.eye_tracking_thread, thread_name);
 
 	//os_thread_helper_lock(&hmd->et_data.eye_tracking_thread);
 
-	while(os_thread_helper_is_running_locked(&hmd->et_data.eye_tracking_thread) && result >= 0)
+	bool is_thread_running = true; // os_thread_helper_is_running_locked(&hmd->et_data.eye_tracking_thread)
+
+	while(is_thread_running)
 	{
 		//os_thread_helper_unlock(&hmd->et_data.eye_tracking_thread);
 
@@ -747,14 +749,12 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 #endif
 
 #if 0
-	for(size_t i = 0; i < ARRAY_SIZE(hmd->et_data.eyes); i++)
+	for(size_t i = 0; i < 2; i++)
 	{
 		u_var_add_gui_header(&hmd->et_data, NULL, i == 0 ? "Left Eye" : "Right Eye");
 		psvr2_et_eye_data* eye = &hmd->et_data.eyes[i];
 
-		m_filter_euro_vec3_init(&eye->gaze_direction_filter, M_EURO_FILTER_EYE_TRACKING_FCMIN,
-			M_EURO_FILTER_EYE_TRACKING_FCMIN_D, M_EURO_FILTER_EYE_TRACKING_BETA);
-
+		m_filter_euro_vec3_init(&eye->gaze_direction_filter, M_EURO_FILTER_EYE_TRACKING_FCMIN, M_EURO_FILTER_EYE_TRACKING_FCMIN_D, M_EURO_FILTER_EYE_TRACKING_BETA);
 
 		u_var_add_bool(&hmd->et_data, &eye->blink_valid, "Blink Valid");
 		u_var_add_bool(&hmd->et_data, &eye->blink, "Blink");
@@ -775,7 +775,9 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		u_var_add_bool(&hmd->et_data, &eye->unk_float_4_valid, "unk_float_4 Valid");
 		u_var_add_ro_vec2_f32(&hmd->et_data, &eye->unk_float_4, "unk_float_4");
 	}
+#endif
 
+#if 0
 	{
 		u_var_add_gui_header(&hmd->et_data, NULL, "Combined Eye Data");
 		psvr2_et_combined_data* combined = &hmd->et_data.combined;
