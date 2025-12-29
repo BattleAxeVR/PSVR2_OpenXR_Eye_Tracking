@@ -404,10 +404,8 @@ struct psvr2_hmd
 	// Camera (bulk) transfers
 	libusb_transfer* camera_xfers[NUM_CAM_XFERS] = {};
 
-
 	// Camera debug sinks
 	//u_sink_debug debug_sinks[4];
-
 #endif
 
 	//u_var_button brightness_btn;
