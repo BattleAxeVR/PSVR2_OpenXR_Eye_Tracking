@@ -266,7 +266,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		const vec3 gaze_direction_openxr = convert_psvr2_direction_to_openxr(psvr2_per_eye_gaze_data.gaze_direction);
 
 #if ENABLE_DEBUG_LOG_GAZES
-		if((eye == LEFT) && (fabs(gaze_direction_openxr.x > 0.01f) || fabs(gaze_direction_openxr.y > 0.01f)))
+		if((fabs(gaze_direction_openxr.x > 0.01f)) || (fabs(gaze_direction_openxr.y > 0.01f)))
 		{
 			printf("%s EYE GAZE DIR: X = %.2f, Y = %.2f\n", (eye == LEFT) ? "LEFT" : "RIGHT", gaze_direction_openxr.x, gaze_direction_openxr.y);
 		}
