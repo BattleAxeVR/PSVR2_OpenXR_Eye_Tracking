@@ -444,6 +444,8 @@ uint8_t gaze_buf[USB_GAZE_XFER_SIZE] = { 0 };
 
 static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 {
+	printf("START process_gaze_packet: %zu bytes", bytes_read);
+
 	psvr2_gaze_state input_gaze_state = {};
 
 	if(bytes_read < sizeof(input_gaze_state))
@@ -487,6 +489,10 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		const vec3 gaze_point_m = convert_m_to_mm(psvr2_per_eye_gaze_data.gaze_point_mm);
 		const vec3 gaze_point_openxr_m = convert_psvr2_direction_to_openxr(gaze_point_m);
 		const vec3 gaze_direction_openxr = convert_psvr2_direction_to_openxr(psvr2_per_eye_gaze_data.gaze_direction);
+
+#if ENABLE_DEBUG_LOG_GAZES
+		printf("%s EYE GAZE DIR: X = %.2f, Y = %.2f, Z = %.2f", (eye == LEFT) ? "LEFT" : "RIGHT", gaze_direction_openxr.x, gaze_direction_openxr.y, gaze_direction_openxr.z);
+#endif
 
 #if SUPPORT_LERPED_BLINK_STATES
 		if(openxr_per_eye_gaze.is_blink_state_valid && (openxr_per_eye_gaze.blink != openxr_per_eye_gaze.blink_interp))
