@@ -899,7 +899,7 @@ static bool psvr2_usb_open(psvr2_hmd* hmd)
 
 	hmd->dev = libusb_open_device_with_vid_pid(hmd->ctx, PSVR2_VID, PSVR2_PID);
 
-	if(hmd->dev == NULL)
+	if(hmd->dev == nullptr)
 	{
 		printf("Failed to open USB device\n");
 		return false;
