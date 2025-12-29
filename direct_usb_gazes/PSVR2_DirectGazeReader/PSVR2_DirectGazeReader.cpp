@@ -53,245 +53,6 @@ vec3 safe_normalize(const vec3& input)
 }
 
 
-#if 0
-int verbose = 0;
-
-static void print_endpoint_comp(const struct libusb_ss_endpoint_companion_descriptor* ep_comp)
-{
-	printf("      USB 3.0 Endpoint Companion:\n");
-	printf("        bMaxBurst:           %u\n", ep_comp->bMaxBurst);
-	printf("        bmAttributes:        %02xh\n", ep_comp->bmAttributes);
-	printf("        wBytesPerInterval:   %u\n", ep_comp->wBytesPerInterval);
-}
-
-static void print_endpoint(const struct libusb_endpoint_descriptor* endpoint)
-{
-	int i, ret;
-
-	printf("      Endpoint:\n");
-	printf("        bEndpointAddress:    %02xh\n", endpoint->bEndpointAddress);
-	printf("        bmAttributes:        %02xh\n", endpoint->bmAttributes);
-	printf("        wMaxPacketSize:      %u\n", endpoint->wMaxPacketSize);
-	printf("        bInterval:           %u\n", endpoint->bInterval);
-	printf("        bRefresh:            %u\n", endpoint->bRefresh);
-	printf("        bSynchAddress:       %u\n", endpoint->bSynchAddress);
-
-	for(i = 0; i < endpoint->extra_length;)
-	{
-		if(LIBUSB_DT_SS_ENDPOINT_COMPANION == endpoint->extra[i + 1])
-		{
-			struct libusb_ss_endpoint_companion_descriptor* ep_comp;
-
-			ret = libusb_get_ss_endpoint_companion_descriptor(NULL, endpoint, &ep_comp);
-			if(LIBUSB_SUCCESS != ret)
-				continue;
-
-			print_endpoint_comp(ep_comp);
-
-			libusb_free_ss_endpoint_companion_descriptor(ep_comp);
-		}
-
-		i += endpoint->extra[i];
-	}
-}
-
-static void print_altsetting(const struct libusb_interface_descriptor* interface)
-{
-	uint8_t i;
-
-	printf("    Interface:\n");
-	printf("      bInterfaceNumber:      %u\n", interface->bInterfaceNumber);
-	printf("      bAlternateSetting:     %u\n", interface->bAlternateSetting);
-	printf("      bNumEndpoints:         %u\n", interface->bNumEndpoints);
-	printf("      bInterfaceClass:       %u\n", interface->bInterfaceClass);
-	printf("      bInterfaceSubClass:    %u\n", interface->bInterfaceSubClass);
-	printf("      bInterfaceProtocol:    %u\n", interface->bInterfaceProtocol);
-	printf("      iInterface:            %u\n", interface->iInterface);
-
-	for(i = 0; i < interface->bNumEndpoints; i++)
-		print_endpoint(&interface->endpoint[i]);
-}
-
-static void print_2_0_ext_cap(struct libusb_usb_2_0_extension_descriptor* usb_2_0_ext_cap)
-{
-	printf("    USB 2.0 Extension Capabilities:\n");
-	printf("      bDevCapabilityType:    %u\n", usb_2_0_ext_cap->bDevCapabilityType);
-	printf("      bmAttributes:          %08xh\n", usb_2_0_ext_cap->bmAttributes);
-}
-
-static void print_ss_usb_cap(struct libusb_ss_usb_device_capability_descriptor* ss_usb_cap)
-{
-	printf("    USB 3.0 Capabilities:\n");
-	printf("      bDevCapabilityType:    %u\n", ss_usb_cap->bDevCapabilityType);
-	printf("      bmAttributes:          %02xh\n", ss_usb_cap->bmAttributes);
-	printf("      wSpeedSupported:       %u\n", ss_usb_cap->wSpeedSupported);
-	printf("      bFunctionalitySupport: %u\n", ss_usb_cap->bFunctionalitySupport);
-	printf("      bU1devExitLat:         %u\n", ss_usb_cap->bU1DevExitLat);
-	printf("      bU2devExitLat:         %u\n", ss_usb_cap->bU2DevExitLat);
-}
-
-static void print_bos(libusb_device_handle* handle)
-{
-	struct libusb_bos_descriptor* bos;
-	uint8_t i;
-	int ret;
-
-	ret = libusb_get_bos_descriptor(handle, &bos);
-	if(ret < 0)
-		return;
-
-	printf("  Binary Object Store (BOS):\n");
-	printf("    wTotalLength:            %u\n", bos->wTotalLength);
-	printf("    bNumDeviceCaps:          %u\n", bos->bNumDeviceCaps);
-
-	for(i = 0; i < bos->bNumDeviceCaps; i++)
-	{
-		struct libusb_bos_dev_capability_descriptor* dev_cap = bos->dev_capability[i];
-
-		if(dev_cap->bDevCapabilityType == LIBUSB_BT_USB_2_0_EXTENSION)
-		{
-			struct libusb_usb_2_0_extension_descriptor* usb_2_0_extension;
-
-			ret = libusb_get_usb_2_0_extension_descriptor(NULL, dev_cap, &usb_2_0_extension);
-			if(ret < 0)
-				return;
-
-			print_2_0_ext_cap(usb_2_0_extension);
-			libusb_free_usb_2_0_extension_descriptor(usb_2_0_extension);
-		}
-		else if(dev_cap->bDevCapabilityType == LIBUSB_BT_SS_USB_DEVICE_CAPABILITY)
-		{
-			struct libusb_ss_usb_device_capability_descriptor* ss_dev_cap;
-
-			ret = libusb_get_ss_usb_device_capability_descriptor(NULL, dev_cap, &ss_dev_cap);
-			if(ret < 0)
-				return;
-
-			print_ss_usb_cap(ss_dev_cap);
-			libusb_free_ss_usb_device_capability_descriptor(ss_dev_cap);
-		}
-	}
-
-	libusb_free_bos_descriptor(bos);
-}
-
-static void print_interface(const struct libusb_interface* interface)
-{
-	int i;
-
-	for(i = 0; i < interface->num_altsetting; i++)
-		print_altsetting(&interface->altsetting[i]);
-}
-
-static void print_configuration(struct libusb_config_descriptor* config)
-{
-	uint8_t i;
-
-	printf("  Configuration:\n");
-	printf("    wTotalLength:            %u\n", config->wTotalLength);
-	printf("    bNumInterfaces:          %u\n", config->bNumInterfaces);
-	printf("    bConfigurationValue:     %u\n", config->bConfigurationValue);
-	printf("    iConfiguration:          %u\n", config->iConfiguration);
-	printf("    bmAttributes:            %02xh\n", config->bmAttributes);
-	printf("    MaxPower:                %u\n", config->MaxPower);
-
-	for(i = 0; i < config->bNumInterfaces; i++)
-		print_interface(&config->interface[i]);
-}
-
-static void print_device(libusb_device* dev, libusb_device_handle* handle)
-{
-	struct libusb_device_descriptor desc;
-	unsigned char string[256];
-	const char* speed;
-	int ret;
-	uint8_t i;
-
-	switch(libusb_get_device_speed(dev))
-	{
-	case LIBUSB_SPEED_LOW:		speed = "1.5M"; break;
-	case LIBUSB_SPEED_FULL:		speed = "12M"; break;
-	case LIBUSB_SPEED_HIGH:		speed = "480M"; break;
-	case LIBUSB_SPEED_SUPER:	speed = "5G"; break;
-	case LIBUSB_SPEED_SUPER_PLUS:	speed = "10G"; break;
-	case LIBUSB_SPEED_SUPER_PLUS_X2:	speed = "20G"; break;
-	default:			speed = "Unknown";
-	}
-
-	ret = libusb_get_device_descriptor(dev, &desc);
-
-	if(ret < 0)
-	{
-		fprintf(stderr, "failed to get device descriptor");
-		return;
-	}
-
-	printf("Dev (bus %u, device %u): %04X - %04X speed: %s\n", libusb_get_bus_number(dev), libusb_get_device_address(dev),	desc.idVendor, desc.idProduct, speed);
-
-	if(!handle)
-	{
-		libusb_open(dev, &handle);
-	}
-		
-
-	if(handle)
-	{
-		if(desc.iManufacturer)
-		{
-			ret = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, string, sizeof(string));
-			if(ret > 0)
-				printf("  Manufacturer:              %s\n", (char*)string);
-		}
-
-		if(desc.iProduct)
-		{
-			ret = libusb_get_string_descriptor_ascii(handle, desc.iProduct, string, sizeof(string));
-			if(ret > 0)
-				printf("  Product:                   %s\n", (char*)string);
-		}
-
-		if(desc.iSerialNumber && verbose)
-		{
-			ret = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, string, sizeof(string));
-			if(ret > 0)
-				printf("  Serial Number:             %s\n", (char*)string);
-		}
-	}
-
-	if(verbose)
-	{
-		for(i = 0; i < desc.bNumConfigurations; i++)
-		{
-			struct libusb_config_descriptor* config;
-
-			ret = libusb_get_config_descriptor(dev, i, &config);
-			if(LIBUSB_SUCCESS != ret)
-			{
-				printf("  Couldn't retrieve descriptors\n");
-				continue;
-			}
-
-			print_configuration(config);
-
-			libusb_free_config_descriptor(config);
-		}
-
-		if(handle && desc.bcdUSB >= 0x0201)
-			print_bos(handle);
-	}
-
-	if(handle)
-		libusb_close(handle);
-}
-
-static int test_wrapped_device(const char* device_name)
-{
-	(void)device_name;
-	printf("Testing wrapped devices is not supported on your platform\n");
-	return 1;
-}
-#endif
-
 bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 {
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
@@ -299,7 +60,7 @@ bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 	switch(xfer->status)
 	{
 	case LIBUSB_TRANSFER_OVERFLOW:
-		printf("%s xfer returned overflow!", type);
+		printf("%s xfer returned overflow!\n", type);
 		// Fall through
 	case LIBUSB_TRANSFER_ERROR:
 	case LIBUSB_TRANSFER_TIMED_OUT:
@@ -310,7 +71,7 @@ bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 		hmd->usb_active_xfers--;
 		//os_thread_helper_signal_locked(&hmd->usb_thread);
 		//os_thread_helper_unlock(&hmd->usb_thread);
-		printf("%s xfer is aborting with status %d", type, xfer->status);
+		printf("%s xfer is aborting with status %d\n", type, xfer->status);
 		return false;
 
 	case LIBUSB_TRANSFER_COMPLETED: 
@@ -335,7 +96,7 @@ static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 
 	if((size_t)xfer->actual_length >= sizeof(struct status_record_hdr))
 	{
-		printf("Status - %d bytes", xfer->actual_length);
+		//printf("Status - %d bytes\n", xfer->actual_length);
 		//printf(xfer->buffer, xfer->actual_length);
 		//process_status_report(hmd, xfer->buffer, xfer->actual_length, received_ns);
 	}
@@ -389,7 +150,7 @@ static void LIBUSB_CALL dump_xfer_cb(struct libusb_transfer* xfer)
 		return;
 	}
 
-	printf("%s xfer size %u", name, xfer->actual_length);
+	//printf("%s xfer size %u\n", name, xfer->actual_length);
 	//printf(xfer->buffer, xfer->actual_length);
 
 	hmd->data_lock.lock();
@@ -412,7 +173,7 @@ bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint
 
 	if(ret < 0)
 	{
-		printf("Failed to send report id %u subcmd %u", report_id, subcmd);
+		printf("Failed to send report id %u subcmd %u\n", report_id, subcmd);
 		return false;
 	}
 
@@ -436,7 +197,7 @@ bool set_camera_mode(psvr2_hmd* hmd, enum psvr2_camera_mode mode)
 
 	return send_psvr2_control(hmd, PSVR2_REPORT_ID_SET_CAMERA_MODE, 0x1, (uint8_t*)(&cmd), sizeof(cmd));
 }
-#endif
+#endif // SUPPORT_PSVR2_CAMERAS
 
 #if SUPPORT_EYE_TRACKING
 
@@ -444,13 +205,13 @@ uint8_t gaze_buf[USB_GAZE_XFER_SIZE] = { 0 };
 
 static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 {
-	printf("START process_gaze_packet: %zu bytes", bytes_read);
+	//printf("START process_gaze_packet: %zu bytes\n", bytes_read);
 
 	psvr2_gaze_state input_gaze_state = {};
 
 	if(bytes_read < sizeof(input_gaze_state))
 	{
-		printf("Gaze packet too small: %zu bytes", bytes_read);
+		printf("Gaze packet too small: %zu bytes\n", bytes_read);
 		return;
 	}
 
@@ -458,7 +219,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	if(memcmp(&input_gaze_state.header, "GS", 2) != 0)
 	{
-		printf("Got gaze with bad header %d", input_gaze_state.header);
+		printf("Got gaze with bad header %d\n", input_gaze_state.header);
 		return;
 	}
 
@@ -491,7 +252,10 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		const vec3 gaze_direction_openxr = convert_psvr2_direction_to_openxr(psvr2_per_eye_gaze_data.gaze_direction);
 
 #if ENABLE_DEBUG_LOG_GAZES
-		printf("%s EYE GAZE DIR: X = %.2f, Y = %.2f, Z = %.2f", (eye == LEFT) ? "LEFT" : "RIGHT", gaze_direction_openxr.x, gaze_direction_openxr.y, gaze_direction_openxr.z);
+		if((eye == LEFT) && (fabs(gaze_direction_openxr.x > 0.01f) || fabs(gaze_direction_openxr.y > 0.01f)))
+		{
+			printf("%s EYE GAZE DIR: X = %.2f, Y = %.2f\n", (eye == LEFT) ? "LEFT" : "RIGHT", gaze_direction_openxr.x, gaze_direction_openxr.y);
+		}
 #endif
 
 #if SUPPORT_LERPED_BLINK_STATES
@@ -601,14 +365,14 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 
 	if((size_t)xfer->actual_length >= sizeof(psvr2_gaze_state))
 	{
-		printf("Gaze - %d bytes", xfer->actual_length);
+		//printf("Gaze - %d bytes\n", xfer->actual_length);
 		//printf(xfer->buffer, xfer->actual_length);
 
 		process_gaze_packet(hmd, xfer->buffer, xfer->actual_length);
 	}
 	else
 	{
-		printf("bad gaze - %d bytes", xfer->actual_length);
+		printf("bad gaze - %d bytes\n", xfer->actual_length);
 	}
 
 	libusb_submit_transfer(xfer);
@@ -631,7 +395,7 @@ static void* psvr2_eye_tracking_control_thread(void* usrptr)
 
 		if(!success)
 		{
-			printf("Failed to send gaze keepalive");
+			printf("Failed to send gaze keepalive\n");
 			return NULL;
 		}
 
@@ -658,7 +422,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	if(hmd->gaze_xfer == NULL)
 	{
-		printf("Could not alloc USB transfer for gaze data");
+		printf("Could not alloc USB transfer for gaze data\n");
 		return -1;
 	}
 	
@@ -668,7 +432,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Could not submit USB transfer for gaze data");
+		printf("Could not submit USB transfer for gaze data\n");
 		libusb_free_transfer(hmd->gaze_xfer);
 		hmd->gaze_xfer = NULL;
 		return -1;
@@ -680,7 +444,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	if(hmd->openxr_eye_tracking_data_.gaze_relation_history == NULL)
 	{
-		printf("Could not create relation history");
+		printf("Could not create relation histor\ny");
 		return -1;
 	}
 #endif
@@ -699,7 +463,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 			if(res < 0)
 			{
-				printf("Could not send gaze calibration");
+				printf("Could not send gaze calibration\n");
 				return -1;
 			}
 
@@ -708,89 +472,22 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 		fclose(eye_calib_file);
 	}
-#endif
+#endif // SUPPORT_SONY_ET_CALIBRATION
 
 	// Start eye-tracking enable/disable/keepalive thread
 	hmd->openxr_eye_tracking_data_.eye_tracking_thread = std::thread(psvr2_eye_tracking_control_thread, hmd);
 
-	//m_filter_euro_vec3_init(&hmd->openxr_eye_tracking_data_.combined.gaze_direction_filter, M_EURO_FILTER_EYE_TRACKING_FCMIN, M_EURO_FILTER_EYE_TRACKING_FCMIN_D, M_EURO_FILTER_EYE_TRACKING_BETA);
+#if SUPPORT_FILTERED_GAZE_DIRECTIONS
+	m_filter_euro_vec3_init(&hmd->openxr_eye_tracking_data_.combined.gaze_direction_filter, M_EURO_FILTER_EYE_TRACKING_FCMIN, M_EURO_FILTER_EYE_TRACKING_FCMIN_D, M_EURO_FILTER_EYE_TRACKING_BETA);
 
-	//u_var_add_root(&hmd->openxr_eye_tracking_data_, "PSVR2 Eye Tracker", true);
-
-	//u_var_add_bool(&hmd->openxr_eye_tracking_data_, &hmd->openxr_eye_tracking_data_.want_enabled, "Eye Tracking Wanted");
-	//u_var_add_bool(&hmd->openxr_eye_tracking_data_, &hmd->openxr_eye_tracking_data_.force_enable, "Force Enable Eye Tracking");
-	//u_var_add_bool(&hmd->openxr_eye_tracking_data_, &hmd->openxr_eye_tracking_data_.enabled, "Force Enable Enabled");
-
-#if 0
-	{
-		u_var_add_gui_header(&hmd->openxr_eye_tracking_data_, NULL, "Eye Tracker Data");
-		psvr2_openxr_eye_tracking_data_* openxr_eye_tracking_data_ = &hmd->openxr_eye_tracking_data_;
-
-		u_var_add_ro_i64_ns(openxr_eye_tracking_data_, &openxr_eye_tracking_data_->last_remote_report_sample_time_ns, "Timestamp");
-		u_var_add_ro_u32(openxr_eye_tracking_data_, &openxr_eye_tracking_data_->last_remote_report_sample_time_us, "Raw Timestamp (us)");
-
-		u_var_add_bool(openxr_eye_tracking_data_, &openxr_eye_tracking_data_->unk_float_4_valid, "unk_float_4 Valid");
-		u_var_add_f32(openxr_eye_tracking_data_, &openxr_eye_tracking_data_->unk_float_4, "unk_float_4");
-
-		u_var_add_bool(openxr_eye_tracking_data_, &openxr_eye_tracking_data_->unk_float_5_valid, "unk_float_5 Valid");
-		u_var_add_f32(openxr_eye_tracking_data_, &openxr_eye_tracking_data_->unk_float_5, "unk_float_5");
-	}
-#endif
-
-#if 0
 	for(size_t i = 0; i < 2; i++)
 	{
-		u_var_add_gui_header(&hmd->openxr_eye_tracking_data_, NULL, i == 0 ? "Left Eye" : "Right Eye");
 		psvr2_et_eye_data* eye = &hmd->openxr_eye_tracking_data_.eyes[i];
 
-#if SUPPORT_FILTERED_GAZE_DIRECTIONS
 		m_filter_euro_vec3_init(&eye->gaze_direction_filter, M_EURO_FILTER_EYE_TRACKING_FCMIN, M_EURO_FILTER_EYE_TRACKING_FCMIN_D, M_EURO_FILTER_EYE_TRACKING_BETA);
-#endif
 
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &eye->blink_valid, "Blink Valid");
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &eye->blink, "Blink");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &eye->pupil_diameter_valid, "Pupil Diameter Valid");
-		u_var_add_f32(&hmd->openxr_eye_tracking_data_, &eye->pupil_diameter, "Pupil Diameter (meters)");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &eye->gaze_direction_valid, "Gaze Direction Valid");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &eye->gaze_direction, "Gaze Direction");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &eye->filtered_gaze_direction, "Filtered Gaze Direction");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &eye->gaze_point_valid, "Gaze Point Valid");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &eye->gaze_point, "Gaze Point");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &eye->unk_float_2_valid, "unk_float_2 Valid");
-		u_var_add_ro_vec2_f32(&hmd->openxr_eye_tracking_data_, &eye->unk_float_2, "unk_float_2");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &eye->unk_float_4_valid, "unk_float_4 Valid");
-		u_var_add_ro_vec2_f32(&hmd->openxr_eye_tracking_data_, &eye->unk_float_4, "unk_float_4");
 	}
-#endif
-
-#if 0
-	{
-		u_var_add_gui_header(&hmd->openxr_eye_tracking_data_, NULL, "Combined Eye Data");
-		psvr2_et_combined_data* combined = &hmd->openxr_eye_tracking_data_.combined;
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &combined->gaze_point_valid, "Gaze Direction Valid");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &combined->gaze_direction, "Gaze Direction");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &combined->filtered_gaze_direction, "Filtered Gaze Direction");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &combined->gaze_point_valid, "Gaze Point Valid");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &combined->gaze_point, "Gaze Point");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &combined->is_valid, "Valid");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &combined->unk_float_8_valid, "unk_float_8 Valid");
-		u_var_add_f32(&hmd->openxr_eye_tracking_data_, &combined->unk_float_8, "unk_float_8");
-
-		u_var_add_bool(&hmd->openxr_eye_tracking_data_, &combined->unk_float3_pair_valid, "unk_float3_pair Valid");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &combined->unk_float_12, "unk_float_12");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &combined->unk_float_15, "unk_float_15");
-		u_var_add_vec3_f32(&hmd->openxr_eye_tracking_data_, &combined->unk_float_18, "unk_float_18");
-	}
-#endif
+#endif // SUPPORT_FILTERED_GAZE_DIRECTIONS
 
 	return 0;
 }
@@ -804,9 +501,6 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 	psvr2_hmd* hmd = psvr2_hmd(xdev);
 
 	hmd->openxr_eye_tracking_data_.data_mutex.lock();
-
-	// @todo: store a history of facial sample data to be able to interpolate/extrapolate to at_timestamp_ns
-	//        for now, let's just always use the latest data
 
 	timepoint_ns latest_local_sample_time_ns = hmd->openxr_eye_tracking_data_.last_remote_report_sample_time_ns + hmd->hw2mono_vts;
 
@@ -972,7 +666,7 @@ uint8_t vd_buf[USB_VD_XFER_SIZE] = { 0 };
 
 #if SUPPORT_PSVR2_CAMERAS
 uint8_t recv_buf[NUM_CAM_XFERS][USB_CAM_MODE10_XFER_SIZE] = { 0 };
-#endif
+#endif // SUPPORT_PSVR2_CAMERAS
 
 bool psvr2_usb_start(psvr2_hmd* hmd)
 {
@@ -984,7 +678,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->status_xfer == NULL)
 	{
-		printf("Could not alloc USB transfer for status reports");
+		printf("Could not alloc USB transfer for status reports\n");
 		goto out;
 	}
 
@@ -994,7 +688,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Could not submit USB transfer for status reports");
+		printf("Could not submit USB transfer for status reports\n");
 		goto out;
 	}
 	hmd->usb_active_xfers++;
@@ -1011,7 +705,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 		if(hmd->camera_xfers[i] == NULL)
 		{
-			printf("Could not alloc USB transfer %d for camera data", i);
+			printf("Could not alloc USB transfer %d for camera data\n", i);
 			goto out;
 		}
 
@@ -1020,18 +714,18 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 		res = libusb_submit_transfer(hmd->camera_xfers[i]);
 		if(res < 0)
 		{
-			printf("Could not submit USB transfer %d for camera data", i);
+			printf("Could not submit USB transfer %d for camera data\n", i);
 			goto out;
 		}
 		hmd->usb_active_xfers++;
 	}
-#endif
+#endif // SUPPORT_PSVR2_CAMERAS
 
 	hmd->slam_xfer = libusb_alloc_transfer(0);
 
 	if(hmd->slam_xfer == NULL)
 	{
-		printf("Could not alloc USB transfer for SLAM data");
+		printf("Could not alloc USB transfer for SLAM data\n");
 		goto out;
 	}
 
@@ -1041,7 +735,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Could not submit USB transfer for SLAM data");
+		printf("Could not submit USB transfer for SLAM data\n");
 		goto out;
 	}
 	hmd->usb_active_xfers++;
@@ -1051,7 +745,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->led_detector_xfer == NULL)
 	{
-		printf("Could not alloc USB transfer for LED Detector data");
+		printf("Could not alloc USB transfer for LED Detector data\n");
 		goto out;
 	}
 
@@ -1061,7 +755,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Could not submit USB transfer for LED Detector data");
+		printf("Could not submit USB transfer for LED Detector data\n");
 		goto out;
 	}
 	hmd->usb_active_xfers++;
@@ -1071,7 +765,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->relocalizer_xfer == NULL)
 	{
-		printf("Could not alloc USB transfer for RP data");
+		printf("Could not alloc USB transfer for RP data\n");
 		goto out;
 	}
 
@@ -1081,7 +775,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Could not submit USB transfer for RP data");
+		printf("Could not submit USB transfer for RP data\n");
 		goto out;
 	}
 
@@ -1092,7 +786,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->vd_xfer == NULL)
 	{
-		printf("Could not alloc USB transfer for VD data");
+		printf("Could not alloc USB transfer for VD data\n");
 		goto out;
 	}
 	
@@ -1102,7 +796,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Could not submit USB transfer for VD data");
+		printf("Could not submit USB transfer for VD data\n");
 		goto out;
 	}
 
@@ -1113,15 +807,14 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Could not start gaze tracking");
+		printf("Could not start gaze tracking\n");
 		goto out;
 	}
-#endif
+#endif // SUPPORT_EYE_TRACKING
 
 	result = true;
 
 out:
-	hmd->usb_thread.join();
 	//os_thread_helper_unlock(&hmd->usb_thread);
 	return result;
 }
@@ -1153,7 +846,7 @@ static bool psvr2_usb_open(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		printf("Failed to init USB");
+		printf("Failed to init USB\n");
 		return false;
 	}
 
@@ -1161,7 +854,7 @@ static bool psvr2_usb_open(psvr2_hmd* hmd)
 
 	if(hmd->dev == NULL)
 	{
-		printf("Failed to open USB device");
+		printf("Failed to open USB device\n");
 		return false;
 	}
 
@@ -1178,7 +871,7 @@ static bool psvr2_usb_open(psvr2_hmd* hmd)
 
 		if(res < 0)
 		{
-			printf("Failed to claim USB %s interface", name);
+			printf("Failed to claim USB %s interface\n", name);
 			return false;
 		}
 
@@ -1186,7 +879,7 @@ static bool psvr2_usb_open(psvr2_hmd* hmd)
 
 		if(res < 0)
 		{
-			printf("Failed to set USB %s interface alt %d", name, altmode);
+			printf("Failed to set USB %s interface alt %d\n", name, altmode);
 			return false;
 		}
 	}
@@ -1194,27 +887,6 @@ static bool psvr2_usb_open(psvr2_hmd* hmd)
 	printf("PSVR2 USB connection SUCCESS\n");
 	return true;
 }
-
-#if SUPPORT_PSVR2_CAMERAS
-#define TRANSFERS_LIST(_, hmd)                                                                                         \
-	for (int i = 0; i < NUM_CAM_XFERS; i++) {                                                                      \
-		_(hmd->camera_xfers[i])                                                                                \
-	}                                                                                                              \
-	_(hmd->status_xfer)                                                                                            \
-	_(hmd->slam_xfer)                                                                                              \
-	_(hmd->led_detector_xfer)                                                                                      \
-	_(hmd->relocalizer_xfer)                                                                                       \
-	_(hmd->vd_xfer)                                                                                                \
-	_(hmd->gaze_xfer)
-#else
-#define TRANSFERS_LIST(_, hmd)                                                                                         \
-	_(hmd->status_xfer)                                                                                            \
-	_(hmd->slam_xfer)                                                                                              \
-	_(hmd->led_detector_xfer)                                                                                      \
-	_(hmd->relocalizer_xfer)                                                                                       \
-	_(hmd->vd_xfer)                                                                                                \
-	_(hmd->gaze_xfer)
-#endif
 
 static void psvr2_usb_stop(psvr2_hmd* hmd)
 {
@@ -1231,7 +903,7 @@ static void psvr2_usb_stop(psvr2_hmd* hmd)
 			assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
 		}
 	} 
-#endif
+#endif // SUPPORT_PSVR2_CAMERAS
 
 	if(hmd->status_xfer)
 	{
@@ -1269,7 +941,7 @@ static void psvr2_usb_stop(psvr2_hmd* hmd)
 		ret = libusb_cancel_transfer(hmd->gaze_xfer);
 		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
 	}
-#endif
+#endif // SUPPORT_EYE_TRACKING
 
 	hmd->data_lock.unlock();
 }
@@ -1285,7 +957,7 @@ void psvr2_usb_destroy(psvr2_hmd* hmd)
 			hmd->camera_xfers[i] = nullptr;
 		}
 	}
-#endif
+#endif // SUPPORT_PSVR2_CAMERAS
 
 	if(hmd->status_xfer)
 	{
@@ -1323,7 +995,7 @@ void psvr2_usb_destroy(psvr2_hmd* hmd)
 		libusb_free_transfer(hmd->gaze_xfer);
 		hmd->gaze_xfer = nullptr;
 	}
-#endif
+#endif // SUPPORT_EYE_TRACKING
 }
 
 static void psvr2_hmd_destroy(psvr2_hmd* hmd)
@@ -1338,8 +1010,6 @@ static void psvr2_hmd_destroy(psvr2_hmd* hmd)
 	psvr2_usb_stop(hmd);
 	psvr2_usb_destroy(hmd);
 
-	// @note We appear to be hitting a bug in libusb, so this is commented out
-	//       see: https://github.com/libusb/libusb/issues/1605
 	// if (hmd->dev != NULL) 
 	// {
 	// 	libusb_close(hmd->dev);
@@ -1351,21 +1021,17 @@ static void psvr2_hmd_destroy(psvr2_hmd* hmd)
 		hmd->ctx = nullptr;
 	}
 
-	//u_var_remove_root(hmd);
-
 	//m_ff_vec3_f32_free(&hmd->ff_gyro);
 	//m_relation_history_destroy(&hmd->slam_relation_history);
 	//os_mutex_destroy(&hmd->data_lock);
 	//u_device_free(&hmd->base);
 }
 
-
 int main(int argc, char* argv[])
 {
 	const std::string welcome_str = "PSVR 2 Direct Gaze Reader\n\n";
 	printf(welcome_str.c_str());
 
-#if 1
 	psvr2_hmd hmd = {};
 
 	bool usb_open_ok = psvr2_usb_open(&hmd);
@@ -1392,57 +1058,4 @@ int main(int argc, char* argv[])
 	psvr2_hmd_destroy(&hmd);
 
 	return 0;
-
-#else
-	const char* device_name = NULL;
-	libusb_device** devs = nullptr;
-	ssize_t cnt;
-	int r, i;
-
-	for(i = 1; i < argc; i++)
-	{
-		if(!strcmp(argv[i], "-v"))
-		{
-			verbose = 1;
-		}
-		else if(!strcmp(argv[i], "-d") && (i + 1) < argc)
-		{
-			i++;
-			device_name = argv[i];
-		}
-		else
-		{
-			printf("Usage %s [-v] [-d </dev/bus/usb/...>]\n", argv[0]);
-			printf("Note use -d to test libusb_wrap_sys_device()\n");
-			return 1;
-		}
-	}
-
-	r = libusb_init_context(/*ctx=*/NULL, /*options=*/NULL, /*num_options=*/0);
-
-	if(r < 0)
-		return r;
-
-	if(device_name)
-	{
-		r = test_wrapped_device(device_name);
-	}
-	else
-	{
-		cnt = libusb_get_device_list(NULL, &devs);
-		if(cnt < 0)
-		{
-			libusb_exit(NULL);
-			return 1;
-		}
-
-		for(i = 0; devs[i]; i++)
-			print_device(devs[i], NULL);
-
-		libusb_free_device_list(devs, 1);
-	}
-
-	libusb_exit(NULL);
-	return 0;
-#endif
 }
