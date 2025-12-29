@@ -333,16 +333,12 @@ struct psvr2_gaze_state
 	psvr2_gaze_packet gaze_data_;
 };
 
-struct psvr2_et_data
+struct openxr_eye_tracking_data
 {
 	std::thread eye_tracking_thread;
 	std::mutex data_mutex;
 
-	//! Whether eye tracking is currently enabled
 	bool want_enabled = true;
-	bool force_enable = true;
-
-	//! Whether the eye tracking enable command has been sent
 	bool enabled = false;
 
 	//m_relation_history* gaze_relation_history = nullptr;
@@ -350,16 +346,11 @@ struct psvr2_et_data
 	openxr_per_eye_gaze openxr_gazes_[NUM_EYES];
 	openxr_combined_gaze openxr_combined_gaze_;
 
-	bool processed_sample_packet;
+	bool processed_sample_packet = false;
 
-	uint32_t last_remote_report_sample_time_us;
-	timepoint_ns last_remote_report_sample_time_ns;
+	uint32_t last_remote_report_sample_time_us = 0;
+	timepoint_ns last_remote_report_sample_time_ns = 0;
 
-	bool unk_float_4_valid;
-	float unk_float_4;
-
-	bool unk_float_5_valid;
-	float unk_float_5;
 };
 #endif // SUPPORT_EYE_TRACKING
 
@@ -467,8 +458,7 @@ struct psvr2_hmd
 	//m_ff_vec3_f32* ff_gyro = nullptr;
 
 #if SUPPORT_EYE_TRACKING
-	bool eye_feature_enabled = true;
-	psvr2_et_data et_data;
+	openxr_eye_tracking_data openxr_eye_tracking_data_;
 #endif
 
 #if SUPPORT_FACE_TRACKING
@@ -493,7 +483,7 @@ bool psvr2_usb_xfer_continue(libusb_transfer* xfer, const char* type);
 bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint8_t* pkt_data, uint32_t pkt_len);
 
 #if SUPPORT_EYE_TRACKING
-void psvr2_free_et_data(psvr2_hmd* hmd);
+void stop_gaze_keepalive_thread(psvr2_hmd* hmd);
 int psvr2_start_gaze_tracking(psvr2_hmd* hmd);
 #endif
 
