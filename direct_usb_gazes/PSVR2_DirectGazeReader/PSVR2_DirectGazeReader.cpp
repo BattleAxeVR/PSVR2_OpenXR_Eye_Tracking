@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <string>
 #include <libusb.h>
-#include <algorithm>
+#include <chrono>
+#include <assert.h>
 
 #include "psvr2_structs.h"
 
@@ -256,6 +257,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 	hmd->openxr_eye_tracking_data_.last_remote_report_sample_time_ns = timestamp_ns;
 	hmd->openxr_eye_tracking_data_.data_mutex.lock();
 
+#if SUPPORT_PER_EYE_GAZES
 	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
 		const psvr2_per_eye_gaze& psvr2_per_eye_gaze_data = input_gaze_state.gaze_data_.gazes_[eye];
@@ -265,7 +267,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		const vec3 gaze_point_openxr_m = convert_psvr2_direction_to_openxr(gaze_point_m);
 		const vec3 gaze_direction_openxr = convert_psvr2_direction_to_openxr(psvr2_per_eye_gaze_data.gaze_direction);
 
-#if ENABLE_DEBUG_LOG_GAZES
+#if ENABLE_DEBUG_LOG_PER_EYE_GAZES
 		if((fabs(gaze_direction_openxr.x > 0.01f)) || (fabs(gaze_direction_openxr.y > 0.01f)))
 		{
 			printf("%s EYE GAZE DIR: X = %.2f, Y = %.2f\n", (eye == LEFT) ? "LEFT" : "RIGHT", gaze_direction_openxr.x, gaze_direction_openxr.y);
@@ -309,12 +311,22 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		openxr_per_eye_gaze.is_pupil_diameter_valid = psvr2_per_eye_gaze_data.is_pupil_diameter_valid;
 		openxr_per_eye_gaze.pupil_diameter_m = psvr2_per_eye_gaze_data.pupil_diameter_mm * MM_TO_METERS;
 	}
+#endif // SUPPORT_PER_EYE_GAZES
 
+#if SUPPORT_COMBINED_GAZE
 	{
 		const psvr2_combined_gaze& input_combined_gaze = input_gaze_state.gaze_data_.combined_gaze_;
 		openxr_combined_gaze& openxr_combined_gaze = hmd->openxr_eye_tracking_data_.openxr_combined_gaze_;
 
 		const vec3 normalized_gaze_direction_openxr = convert_psvr2_direction_to_openxr(input_combined_gaze.normalized_gaze_direction);
+
+#if ENABLE_DEBUG_LOG_COMBINED_GAZE
+		if((fabs(normalized_gaze_direction_openxr.x > 0.01f)) || (fabs(normalized_gaze_direction_openxr.y > 0.01f)))
+		{
+			printf("COMBINED GAZE DIR: X = %.2f, Y = %.2f\n", normalized_gaze_direction_openxr.x, normalized_gaze_direction_openxr.y);
+		}
+#endif
+
 		const vec3 gaze_point_m = convert_mm_to_m(input_combined_gaze.gaze_point_mm);
 		const vec3 gaze_point_openxr_m = convert_psvr2_direction_to_openxr(gaze_point_m);
 
@@ -341,6 +353,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		openxr_combined_gaze.gaze_point_m = gaze_point_openxr_m;
 		openxr_combined_gaze.is_valid = input_combined_gaze.is_valid;
 	}
+#endif // SUPPORT_COMBINED_GAZE
 
 	hmd->openxr_eye_tracking_data_.data_mutex.unlock();
 
