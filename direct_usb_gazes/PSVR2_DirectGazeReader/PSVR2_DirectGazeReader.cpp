@@ -313,7 +313,8 @@ bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 		printf("%s xfer is aborting with status %d", type, xfer->status);
 		return false;
 
-	case LIBUSB_TRANSFER_COMPLETED: break;
+	case LIBUSB_TRANSFER_COMPLETED: 
+		break;
 	}
 
 	return true;
