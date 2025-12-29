@@ -6,13 +6,14 @@
 #include <mutex>
 #include <thread>
 
-#define SUPPORT_PSVR2_SLAM_TRACKING 0
 #define SUPPORT_PSVR2_STATUS 0
+#define SUPPORT_PSVR2_SLAM_TRACKING 0
+#define SUPPORT_PSVR2_EYE_TRACKING 1
 #define SUPPORT_PSVR2_LED_DETECTOR 0
 #define SUPPORT_PSVR2_RELOCALIZER 0
 #define SUPPORT_PSVR2_VD 0
-
-#define SUPPORT_PSVR2_EYE_TRACKING 1
+#define SUPPORT_PSVR2_CAMERAS 0
+#define SUPPORT_FACE_TRACKING (SUPPORT_PSVR2_EYE_TRACKING && SUPPORT_PSVR2_CAMERAS &&  0)
 
 #define SUPPORT_PSVR2_PER_EYE_GAZES (SUPPORT_PSVR2_EYE_TRACKING && 1)
 #define ENABLE_DEBUG_LOG_PER_EYE_GAZES (SUPPORT_PSVR2_PER_EYE_GAZES && 1)
@@ -23,9 +24,6 @@
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_PSVR2_EYE_TRACKING && 0)
 #define SUPPORT_FILTERED_GAZE_DIRECTIONS (SUPPORT_PSVR2_EYE_TRACKING && 0)
 #define SUPPORT_LERPED_BLINK_STATES (SUPPORT_PSVR2_EYE_TRACKING && 0)
-
-#define SUPPORT_PSVR2_CAMERAS 0
-#define SUPPORT_FACE_TRACKING (SUPPORT_PSVR2_EYE_TRACKING && 0)
 
 #ifndef NUM_EYES
 #define NUM_EYES 2
@@ -101,6 +99,13 @@ struct vec3
 	float x = 0.0f;
 	float y = 0.0f;
 	float z = 0.0f;
+};
+
+struct psvr2_interface_info
+{
+	int interface_no = 0;
+	int altmode = 0;
+	const char* name = nullptr;
 };
 
 vec3 convert_m_to_mm(const vec3& input_m);

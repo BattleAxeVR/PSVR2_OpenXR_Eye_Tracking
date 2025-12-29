@@ -866,21 +866,29 @@ out:
 	return result;
 }
 
-struct psvr2_interface_info
+psvr2_interface_info interface_list[] = 
 {
-	int interface_no = 0;
-	int altmode = 0;
-	const char* name = nullptr;
-};
-
-psvr2_interface_info interface_list[] = {
+#if SUPPORT_PSVR2_STATUS
 	{.interface_no = PSVR2_STATUS_INTERFACE, .altmode = 1, .name = "status"},
+#endif
+#if SUPPORT_PSVR2_SLAM_TRACKING
 	{.interface_no = PSVR2_SLAM_INTERFACE, .altmode = 0, .name = "SLAM"},
+#endif
+#if SUPPORT_PSVR2_EYE_TRACKING
 	{.interface_no = PSVR2_GAZE_INTERFACE, .altmode = 0, .name = "Gaze"},
+#endif
+#if SUPPORT_PSVR2_CAMERAS
 	{.interface_no = PSVR2_CAMERA_INTERFACE, .altmode = 0, .name = "Camera"},
+#endif
+#if SUPPORT_PSVR2_LED_DETECTOR
 	{.interface_no = PSVR2_LD_INTERFACE, .altmode = 0, .name = "LED Detector"},
+#endif
+#if SUPPORT_PSVR2_RELOCALIZER
 	{.interface_no = PSVR2_RP_INTERFACE, .altmode = 0, .name = "Relocalizer"},
+#endif
+#if SUPPORT_PSVR2_VD
 	{.interface_no = PSVR2_VD_INTERFACE, .altmode = 0, .name = "VD"},
+#endif
 };
 
 static bool psvr2_usb_open(psvr2_hmd* hmd)
