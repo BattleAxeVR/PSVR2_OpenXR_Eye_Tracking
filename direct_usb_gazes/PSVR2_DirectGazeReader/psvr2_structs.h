@@ -10,6 +10,8 @@
 #include <thread>
 #include <chrono>
 
+#define SUPPORT_SLAM_TRACKING 0
+
 #define SUPPORT_EYE_TRACKING 1
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
 #define SUPPORT_FILTERED_GAZE_DIRECTIONS (SUPPORT_EYE_TRACKING && 0)
@@ -83,7 +85,6 @@
 typedef uint32_t uint;
 typedef uint64_t timepoint_ns;
 
-
 struct vec2
 {
 	float x = 0.0f;
@@ -103,6 +104,7 @@ vec3 convert_psvr2_direction_to_openxr(const vec3& psvr2_direction);
 float square(const float input);
 vec3 safe_normalize(const vec3& input);
 
+#if SUPPORT_SLAM_TRACKING
 struct imu_record
 {
 	uint vts_us;
@@ -122,6 +124,7 @@ struct slam_record
 	uint8_t remainder[470];
 };
 
+
 #pragma pack(push, 1)
 struct imu_usb_record
 {
@@ -132,17 +135,6 @@ struct imu_usb_record
 	int16_t dp_line_cnt;
 	int16_t imu_ts_us;
 	int16_t status;
-};
-
-struct status_record_hdr
-{
-	uint8_t dprx_status;      //< 0 = not ready. 2 = cinematic? and 1 = unknown. HDCP? Other?
-	uint8_t prox_sensor_flag; //< 0 = not triggered. 1 = triggered?
-	uint8_t function_button;  //< 0 = not pressed, 1 = pressed
-	uint8_t empty0[2];
-	uint8_t ipd_dial_mm; //< 59 to 72mm
-
-	uint8_t remainder[26];
 };
 
 struct slam_usb_record
@@ -156,6 +148,22 @@ struct slam_usb_record
 	float orient[4]; //< Orientation quaternion
 	uint8_t remainder[468];
 };
+#pragma pack(pop)
+
+#endif // SUPPORT_SLAM_TRACKING
+
+#if 1
+#pragma pack(push, 1)
+struct status_record_hdr
+{
+	uint8_t dprx_status;      //< 0 = not ready. 2 = cinematic? and 1 = unknown. HDCP? Other?
+	uint8_t prox_sensor_flag; //< 0 = not triggered. 1 = triggered?
+	uint8_t function_button;  //< 0 = not pressed, 1 = pressed
+	uint8_t empty0[2];
+	uint8_t ipd_dial_mm; //< 59 to 72mm
+
+	uint8_t remainder[26];
+};
 
 struct sie_ctrl_pkt
 {
@@ -165,6 +173,8 @@ struct sie_ctrl_pkt
 	uint8_t data[512 - 8];
 };
 #pragma pack(pop)
+
+#endif // 
 
 #if SUPPORT_PSVR2_CAMERAS
 enum psvr2_camera_mode
@@ -386,11 +396,17 @@ struct psvr2_hmd
 
 	// Camera (bulk) transfers
 	libusb_transfer* camera_xfers[NUM_CAM_XFERS] = {};
+
+
+	// Camera debug sinks
+	//u_sink_debug debug_sinks[4];
+
 #endif
 
 	//u_var_button brightness_btn;
 	float brightness = 1.0f;
 
+#if SUPPORT_SLAM_TRACKING
 	// IMU input data
 	uint last_imu_vts_us = 0;   //< Last VTS timestamp, in microseconds
 	uint16_t last_imu_ts = 0; //< Last IMU timestamp, in microseconds
@@ -411,8 +427,13 @@ struct psvr2_hmd
 	// Display parameters
 	//u_device_simple_info info;
 
-	// Camera debug sinks
-	//u_sink_debug debug_sinks[4];
+	// SLAM (bulk) transfer
+	libusb_transfer* slam_xfer = nullptr;
+
+	timepoint_ns last_imu_vts_ns = 0;
+	timepoint_ns last_slam_vts_ns = 0;
+
+#endif
 
 	// USB communication
 	libusb_context* ctx = nullptr;
@@ -423,9 +444,6 @@ struct psvr2_hmd
 
 	// Status report
 	libusb_transfer* status_xfer = nullptr;
-
-	// SLAM (bulk) transfer
-	libusb_transfer* slam_xfer = nullptr;
 
 	// LD EP9 (bulk) transfer
 	libusb_transfer* led_detector_xfer = nullptr;
@@ -449,8 +467,6 @@ struct psvr2_hmd
 	// Timing data
 	int timestamp_samples = 0;
 
-	timepoint_ns last_imu_vts_ns = 0;
-	timepoint_ns last_slam_vts_ns = 0;
 	timepoint_ns system_zero_ns = 0;
 	timepoint_ns last_imu_ns = 0;
 

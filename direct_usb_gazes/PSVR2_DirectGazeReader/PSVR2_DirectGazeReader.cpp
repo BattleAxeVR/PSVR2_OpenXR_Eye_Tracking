@@ -81,7 +81,7 @@ bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 	return true;
 }
 
-static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
+static void LIBUSB_CALL status_xfer_cb(libusb_transfer* xfer)
 {
 	if(!psvr2_usb_xfer_continue(xfer, "Status"))
 	{
@@ -94,7 +94,7 @@ static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
 	hmd->data_lock.lock();
 
-	if((size_t)xfer->actual_length >= sizeof(struct status_record_hdr))
+	if((size_t)xfer->actual_length >= sizeof(status_record_hdr))
 	{
 		//printf("Status - %d bytes\n", xfer->actual_length);
 		//printf(xfer->buffer, xfer->actual_length);
@@ -105,7 +105,8 @@ static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 	hmd->data_lock.unlock();
 }
 
-static void LIBUSB_CALL slam_xfer_cb(struct libusb_transfer* xfer)
+#if SUPPORT_SLAM_TRACKING
+static void LIBUSB_CALL slam_xfer_cb(libusb_transfer* xfer)
 {
 	if(!psvr2_usb_xfer_continue(xfer, "SLAM frame"))
 	{
@@ -114,7 +115,7 @@ static void LIBUSB_CALL slam_xfer_cb(struct libusb_transfer* xfer)
 
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
 
-	if(xfer->actual_length == sizeof(struct slam_usb_record))
+	if(xfer->actual_length == sizeof(slam_usb_record))
 	{
 		//process_slam_record(hmd, xfer->buffer, xfer->actual_length);
 	}
@@ -123,8 +124,9 @@ static void LIBUSB_CALL slam_xfer_cb(struct libusb_transfer* xfer)
 	libusb_submit_transfer(xfer);
 	hmd->data_lock.unlock();
 }
+#endif // SUPPORT_SLAM_TRACKING
 
-static void LIBUSB_CALL dump_xfer_cb(struct libusb_transfer* xfer)
+static void LIBUSB_CALL dump_xfer_cb(libusb_transfer* xfer)
 {
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
 
@@ -658,11 +660,25 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 }
 #endif // SUPPORT_FACE_TRACKING
 
+#if 1
 uint8_t status_buf[USB_STATUS_XFER_SIZE] = { 0 };
+#endif
+
+#if SUPPORT_SLAM_TRACKING
 uint8_t slam_buf[USB_SLAM_XFER_SIZE] = { 0 };
+#endif // SUPPORT_SLAM_TRACKING
+
+#if 1
 uint8_t led_detector_buf[USB_LD_XFER_SIZE] = { 0 };
+#endif
+
+#if 1
 uint8_t relocalizer_buf[USB_RP_XFER_SIZE] = { 0 };
+#endif
+
+#if 1
 uint8_t vd_buf[USB_VD_XFER_SIZE] = { 0 };
+#endif
 
 #if SUPPORT_PSVR2_CAMERAS
 uint8_t recv_buf[NUM_CAM_XFERS][USB_CAM_MODE10_XFER_SIZE] = { 0 };
@@ -673,7 +689,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	bool result = false;
 	int res = 0;
 
-	// Status endpoint
+#if 1
 	hmd->status_xfer = libusb_alloc_transfer(0);
 
 	if(hmd->status_xfer == NULL)
@@ -692,6 +708,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 		goto out;
 	}
 	hmd->usb_active_xfers++;
+#endif
 
 #if SUPPORT_PSVR2_CAMERAS
 	hmd->camera_enable = true;
@@ -721,6 +738,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	}
 #endif // SUPPORT_PSVR2_CAMERAS
 
+#if SUPPORT_SLAM_TRACKING
 	hmd->slam_xfer = libusb_alloc_transfer(0);
 
 	if(hmd->slam_xfer == NULL)
@@ -739,8 +757,9 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 		goto out;
 	}
 	hmd->usb_active_xfers++;
+#endif // SUPPORT_SLAM_TRACKING
 
-	// LD endpoint
+#if 1
 	hmd->led_detector_xfer = libusb_alloc_transfer(0);
 
 	if(hmd->led_detector_xfer == NULL)
@@ -759,8 +778,9 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 		goto out;
 	}
 	hmd->usb_active_xfers++;
+#endif
 
-	// RP endpoint
+#if 1
 	hmd->relocalizer_xfer = libusb_alloc_transfer(0);
 
 	if(hmd->relocalizer_xfer == NULL)
@@ -780,8 +800,9 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	}
 
 	hmd->usb_active_xfers++;
+#endif
 
-	// VD endpoint
+#if 1
 	hmd->vd_xfer = libusb_alloc_transfer(0);
 
 	if(hmd->vd_xfer == NULL)
@@ -801,6 +822,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	}
 
 	hmd->usb_active_xfers++;
+#endif
 
 #if SUPPORT_EYE_TRACKING
 	res = psvr2_start_gaze_tracking(hmd);
@@ -911,11 +933,13 @@ static void psvr2_usb_stop(psvr2_hmd* hmd)
 		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
 	}
 
+#if SUPPORT_SLAM_TRACKING
 	if(hmd->slam_xfer)
 	{
 		ret = libusb_cancel_transfer(hmd->slam_xfer);
 		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
 	}
+#endif // SUPPORT_SLAM_TRACKING
 
 	if(hmd->led_detector_xfer)
 	{
@@ -965,11 +989,13 @@ void psvr2_usb_destroy(psvr2_hmd* hmd)
 		hmd->status_xfer = nullptr;
 	}
 
+#if SUPPORT_SLAM_TRACKING
 	if(hmd->slam_xfer)
 	{
 		libusb_free_transfer(hmd->slam_xfer);
 		hmd->slam_xfer = nullptr;
 	}
+#endif // SUPPORT_SLAM_TRACKING
 
 	if(hmd->led_detector_xfer)
 	{
