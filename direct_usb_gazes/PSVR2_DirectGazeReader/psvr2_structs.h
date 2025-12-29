@@ -12,7 +12,9 @@
 
 #define SUPPORT_PSVR2_SLAM_TRACKING 0
 #define SUPPORT_PSVR2_STATUS 0
-#define SUPPORT_PSVR2_LED 0
+#define SUPPORT_PSVR2_LED_DETECTOR 0
+#define SUPPORT_PSVR2_RELOCALIZER 0
+#define SUPPORT_PSVR2_VD 0
 
 #define SUPPORT_EYE_TRACKING 1
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
@@ -455,20 +457,20 @@ struct psvr2_hmd
 	libusb_transfer* status_xfer = nullptr;
 #endif // SUPPORT_PSVR2_STATUS
 
-#if SUPPORT_PSVR2_LED
+#if SUPPORT_PSVR2_LED_DETECTOR
 	// LD EP9 (bulk) transfer
 	libusb_transfer* led_detector_xfer = nullptr;
-#endif // SUPPORT_PSVR2_LED
+#endif // SUPPORT_PSVR2_LED_DETECTOR
 
-#if 1
+#if SUPPORT_PSVR2_RELOCALIZER
 	// RP EP10 (bulk) transfer
 	libusb_transfer* relocalizer_xfer = nullptr;
-#endif
+#endif // SUPPORT_PSVR2_RELOCALIZER
 
-#if 1
+#if SUPPORT_PSVR2_VD
 	// VD EP11 (bulk) transfer
 	libusb_transfer* vd_xfer = nullptr;
-#endif
+#endif // SUPPORT_PSVR2_VD
 
 #if SUPPORT_EYE_TRACKING
 	// Gaze transfer
