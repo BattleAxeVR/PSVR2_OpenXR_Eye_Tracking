@@ -299,8 +299,8 @@ bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 	switch(xfer->status)
 	{
 	case LIBUSB_TRANSFER_OVERFLOW:
-		//PSVR2_ERROR(hmd, "%s xfer returned overflow!", type);
-		/* Fall through */
+		printf("%s xfer returned overflow!", type);
+		// Fall through
 	case LIBUSB_TRANSFER_ERROR:
 	case LIBUSB_TRANSFER_TIMED_OUT:
 	case LIBUSB_TRANSFER_CANCELLED:
@@ -310,7 +310,7 @@ bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 		hmd->usb_active_xfers--;
 		//os_thread_helper_signal_locked(&hmd->usb_thread);
 		//os_thread_helper_unlock(&hmd->usb_thread);
-		//PSVR2_TRACE(hmd, "%s xfer is aborting with status %d", type, xfer->status);
+		printf("%s xfer is aborting with status %d", type, xfer->status);
 		return false;
 
 	case LIBUSB_TRANSFER_COMPLETED: break;
@@ -321,8 +321,6 @@ bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
 
 static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 {
-	//DRV_TRACE_MARKER();
-
 	if(!psvr2_usb_xfer_continue(xfer, "Status"))
 	{
 		return;
@@ -336,8 +334,8 @@ static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 
 	if((size_t)xfer->actual_length >= sizeof(struct status_record_hdr))
 	{
-		//PSVR2_TRACE(hmd, "Status - %d bytes", xfer->actual_length);
-		//PSVR2_TRACE_HEX(hmd, xfer->buffer, xfer->actual_length);
+		printf("Status - %d bytes", xfer->actual_length);
+		//printf(xfer->buffer, xfer->actual_length);
 		//process_status_report(hmd, xfer->buffer, xfer->actual_length, received_ns);
 	}
 
@@ -347,8 +345,6 @@ static void LIBUSB_CALL status_xfer_cb(struct libusb_transfer* xfer)
 
 static void LIBUSB_CALL slam_xfer_cb(struct libusb_transfer* xfer)
 {
-	//DRV_TRACE_MARKER();
-
 	if(!psvr2_usb_xfer_continue(xfer, "SLAM frame"))
 	{
 		return;
@@ -368,7 +364,6 @@ static void LIBUSB_CALL slam_xfer_cb(struct libusb_transfer* xfer)
 
 static void LIBUSB_CALL dump_xfer_cb(struct libusb_transfer* xfer)
 {
-	//DRV_TRACE_MARKER();
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
 
 	const char* name = NULL;
@@ -393,8 +388,8 @@ static void LIBUSB_CALL dump_xfer_cb(struct libusb_transfer* xfer)
 		return;
 	}
 
-	//PSVR2_TRACE(hmd, "%s xfer size %u", name, xfer->actual_length);
-	//PSVR2_TRACE_HEX(hmd, xfer->buffer, xfer->actual_length);
+	printf("%s xfer size %u", name, xfer->actual_length);
+	//printf(xfer->buffer, xfer->actual_length);
 
 	hmd->data_lock.lock();
 	libusb_submit_transfer(xfer);
@@ -416,7 +411,7 @@ bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint
 
 	if(ret < 0)
 	{
-		//PSVR2_ERROR(hmd, "Failed to send report id %u subcmd %u", report_id, subcmd);
+		printf("Failed to send report id %u subcmd %u", report_id, subcmd);
 		return false;
 	}
 
@@ -436,7 +431,7 @@ bool set_camera_mode(psvr2_hmd* hmd, enum psvr2_camera_mode mode)
 	cmd.data[0] = 0x1;
 	cmd.data[1] = mode;
 
-	//PSVR2_DEBUG(hmd, "Setting camera mode to 0x%x", mode);
+	printf("Setting camera mode to 0x%x", mode);
 
 	return send_psvr2_control(hmd, PSVR2_REPORT_ID_SET_CAMERA_MODE, 0x1, (uint8_t*)(&cmd), sizeof(cmd));
 }
@@ -452,7 +447,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	if(bytes_read < sizeof(input_gaze_state))
 	{
-		//PSVR2_WARN(hmd, "Gaze packet too small: %zu bytes", bytes_read);
+		printf("Gaze packet too small: %zu bytes", bytes_read);
 		return;
 	}
 
@@ -460,7 +455,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	if(memcmp(&input_gaze_state.header, "GS", 2) != 0)
 	{
-		//PSVR2_WARN(hmd, "Got gaze with bad header %d", input_gaze_state.header);
+		printf("Got gaze with bad header %d", input_gaze_state.header);
 		return;
 	}
 
@@ -592,8 +587,6 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 {
-	//DRV_TRACE_MARKER();
-
 	if(!psvr2_usb_xfer_continue(xfer, "Gaze"))
 	{
 		return;
@@ -603,14 +596,14 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 
 	if((size_t)xfer->actual_length >= sizeof(psvr2_gaze_state))
 	{
-		//PSVR2_TRACE(hmd, "Gaze - %d bytes", xfer->actual_length);
-		//PSVR2_TRACE_HEX(hmd, xfer->buffer, xfer->actual_length);
+		printf("Gaze - %d bytes", xfer->actual_length);
+		//printf(xfer->buffer, xfer->actual_length);
 
 		process_gaze_packet(hmd, xfer->buffer, xfer->actual_length);
 	}
 	else
 	{
-		//PSVR2_TRACE(hmd, "bad gaze - %d bytes", xfer->actual_length);
+		printf("bad gaze - %d bytes", xfer->actual_length);
 	}
 
 	libusb_submit_transfer(xfer);
@@ -633,7 +626,7 @@ static void* psvr2_eye_tracking_control_thread(void* usrptr)
 
 		if(!success)
 		{
-			//PSVR2_ERROR(hmd, "Failed to send gaze keepalive");
+			printf("Failed to send gaze keepalive");
 			return NULL;
 		}
 
@@ -660,7 +653,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	if(hmd->gaze_xfer == NULL)
 	{
-		//PSVR2_ERROR(hmd, "Could not alloc USB transfer for gaze data");
+		printf("Could not alloc USB transfer for gaze data");
 		return -1;
 	}
 	
@@ -670,7 +663,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		//PSVR2_ERROR(hmd, "Could not submit USB transfer for gaze data");
+		printf("Could not submit USB transfer for gaze data");
 		libusb_free_transfer(hmd->gaze_xfer);
 		hmd->gaze_xfer = NULL;
 		return -1;
@@ -682,7 +675,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	if(hmd->openxr_eye_tracking_data_.gaze_relation_history == NULL)
 	{
-		//PSVR2_ERROR(hmd, "Could not create relation history");
+		printf("Could not create relation history");
 		return -1;
 	}
 #endif
@@ -701,7 +694,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 			if(res < 0)
 			{
-				//PSVR2_ERROR(hmd, "Could not send gaze calibration");
+				printf("Could not send gaze calibration");
 				return -1;
 			}
 
@@ -987,7 +980,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->status_xfer == NULL)
 	{
-		//PSVR2_ERROR(hmd, "Could not alloc USB transfer for status reports");
+		printf("Could not alloc USB transfer for status reports");
 		goto out;
 	}
 
@@ -997,7 +990,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		//PSVR2_ERROR(hmd, "Could not submit USB transfer for status reports");
+		printf("Could not submit USB transfer for status reports");
 		goto out;
 	}
 	hmd->usb_active_xfers++;
@@ -1014,7 +1007,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 		if(hmd->camera_xfers[i] == NULL)
 		{
-			//PSVR2_ERROR(hmd, "Could not alloc USB transfer %d for camera data", i);
+			printf("Could not alloc USB transfer %d for camera data", i);
 			goto out;
 		}
 
@@ -1023,7 +1016,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 		res = libusb_submit_transfer(hmd->camera_xfers[i]);
 		if(res < 0)
 		{
-			//PSVR2_ERROR(hmd, "Could not submit USB transfer %d for camera data", i);
+			printf("Could not submit USB transfer %d for camera data", i);
 			goto out;
 		}
 		hmd->usb_active_xfers++;
@@ -1034,7 +1027,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->slam_xfer == NULL)
 	{
-		//PSVR2_ERROR(hmd, "Could not alloc USB transfer for SLAM data");
+		printf("Could not alloc USB transfer for SLAM data");
 		goto out;
 	}
 
@@ -1044,7 +1037,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		//PSVR2_ERROR(hmd, "Could not submit USB transfer for SLAM data");
+		printf("Could not submit USB transfer for SLAM data");
 		goto out;
 	}
 	hmd->usb_active_xfers++;
@@ -1054,7 +1047,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->led_detector_xfer == NULL)
 	{
-		//PSVR2_ERROR(hmd, "Could not alloc USB transfer for LED Detector data");
+		printf("Could not alloc USB transfer for LED Detector data");
 		goto out;
 	}
 
@@ -1064,7 +1057,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		//PSVR2_ERROR(hmd, "Could not submit USB transfer for LED Detector data");
+		printf("Could not submit USB transfer for LED Detector data");
 		goto out;
 	}
 	hmd->usb_active_xfers++;
@@ -1074,7 +1067,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->relocalizer_xfer == NULL)
 	{
-		//PSVR2_ERROR(hmd, "Could not alloc USB transfer for RP data");
+		printf("Could not alloc USB transfer for RP data");
 		goto out;
 	}
 
@@ -1084,7 +1077,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		//PSVR2_ERROR(hmd, "Could not submit USB transfer for RP data");
+		printf("Could not submit USB transfer for RP data");
 		goto out;
 	}
 
@@ -1095,7 +1088,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(hmd->vd_xfer == NULL)
 	{
-		//PSVR2_ERROR(hmd, "Could not alloc USB transfer for VD data");
+		printf("Could not alloc USB transfer for VD data");
 		goto out;
 	}
 	
@@ -1105,7 +1098,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		//PSVR2_ERROR(hmd, "Could not submit USB transfer for VD data");
+		printf("Could not submit USB transfer for VD data");
 		goto out;
 	}
 
@@ -1116,7 +1109,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 
 	if(res < 0)
 	{
-		//PSVR2_ERROR(hmd, "Could not start gaze tracking");
+		printf("Could not start gaze tracking");
 		goto out;
 	}
 #endif
