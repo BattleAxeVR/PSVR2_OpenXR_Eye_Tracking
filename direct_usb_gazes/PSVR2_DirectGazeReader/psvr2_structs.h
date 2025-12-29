@@ -64,6 +64,9 @@
 #define USB_RP_XFER_SIZE 821120
 #define USB_VD_XFER_SIZE 32768
 
+#define PSVR2_VID 0x054C
+#define PSVR2_PID 0x0CDE
+
 #define SERIAL_LENGTH 14
 
 #define GYRO_SCALE (2000.0 / 32767.0)
@@ -369,8 +372,8 @@ struct psvr2_hmd
 
 	bool function_button = false;//< Boolean state for whether the function button is pressed
 
-	bool ipd_updated; //< Whether the IPD has been updated, and an HMD info refresh is needed
-	uint8_t ipd_mm;   //< IPD dial value in mm, from 59 to 72mm
+	bool ipd_updated = false; //< Whether the IPD has been updated, and an HMD info refresh is needed
+	float ipd_mm = 67.0f;   //< IPD dial value in mm, from 59 to 72mm
 
 #if SUPPORT_PSVR2_CAMERAS
 	bool camera_enable = false; //< Whether the camera is enabled
@@ -413,8 +416,8 @@ struct psvr2_hmd
 	libusb_context* ctx = nullptr;
 	libusb_device_handle* dev = nullptr;
 
-	int usb_complete;
-	int usb_active_xfers;
+	int usb_complete = 0;
+	int usb_active_xfers = 0;
 
 	// Status report
 	libusb_transfer* status_xfer = nullptr;

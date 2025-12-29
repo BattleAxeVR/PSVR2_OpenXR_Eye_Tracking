@@ -804,9 +804,10 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 	timepoint_ns latest_local_sample_time_ns = hmd->openxr_eye_tracking_data_.last_remote_report_sample_time_ns + hmd->hw2mono_vts;
 
 	bool gaze_directions_valid = true;
-	float confidence[2];
-	float blink[2];
-	struct xrt_vec3 gaze_directions[2];
+	float confidence[NUM_EYES] = { 0.0f, 0.0f };
+	float blink[NUM_EYES] = { 0.0f, 0.0f };
+
+	xrt_vec3 gaze_directions[2];
 
 	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
@@ -971,8 +972,6 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	bool result = false;
 	int res = 0;
 
-	//os_thread_helper_lock(&hmd->usb_thread);
-
 	// Status endpoint
 	hmd->status_xfer = libusb_alloc_transfer(0);
 
@@ -1115,9 +1114,244 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	result = true;
 
 out:
+	hmd->usb_thread.join();
 	//os_thread_helper_unlock(&hmd->usb_thread);
 	return result;
 }
+
+struct psvr2_interface_info
+{
+	int interface_no = 0;
+	int altmode = 0;
+	const char* name = nullptr;
+};
+
+psvr2_interface_info interface_list[] = {
+	{.interface_no = PSVR2_STATUS_INTERFACE, .altmode = 1, .name = "status"},
+	{.interface_no = PSVR2_SLAM_INTERFACE, .altmode = 0, .name = "SLAM"},
+	{.interface_no = PSVR2_GAZE_INTERFACE, .altmode = 0, .name = "Gaze"},
+	{.interface_no = PSVR2_CAMERA_INTERFACE, .altmode = 0, .name = "Camera"},
+	{.interface_no = PSVR2_LD_INTERFACE, .altmode = 0, .name = "LED Detector"},
+	{.interface_no = PSVR2_RP_INTERFACE, .altmode = 0, .name = "Relocalizer"},
+	{.interface_no = PSVR2_VD_INTERFACE, .altmode = 0, .name = "VD"},
+};
+
+static bool psvr2_usb_open(psvr2_hmd* hmd)
+{
+	printf("Trying to open PSVR2 USB connection...\n");
+
+	int res = 0;
+
+	res = libusb_init(&hmd->ctx);
+
+	if(res < 0)
+	{
+		printf("Failed to init USB");
+		return false;
+	}
+
+	hmd->dev = libusb_open_device_with_vid_pid(hmd->ctx, PSVR2_VID, PSVR2_PID);
+
+	if(hmd->dev == NULL)
+	{
+		printf("Failed to open USB device");
+		return false;
+	}
+
+	size_t num_interfaces = sizeof(interface_list) / sizeof(interface_list[0]);
+
+	for(size_t interface_index = 0; interface_index < num_interfaces; interface_index++)
+	{
+		psvr2_interface_info& interface = interface_list[interface_index];
+		int intf_no = interface.interface_no;
+		int altmode = interface.altmode;
+		const char* name = interface.name;
+
+		res = libusb_claim_interface(hmd->dev, intf_no);
+
+		if(res < 0)
+		{
+			printf("Failed to claim USB %s interface", name);
+			return false;
+		}
+
+		res = libusb_set_interface_alt_setting(hmd->dev, intf_no, altmode);
+
+		if(res < 0)
+		{
+			printf("Failed to set USB %s interface alt %d", name, altmode);
+			return false;
+		}
+	}
+
+	printf("PSVR2 USB connection SUCCESS\n");
+	return true;
+}
+
+#if SUPPORT_PSVR2_CAMERAS
+#define TRANSFERS_LIST(_, hmd)                                                                                         \
+	for (int i = 0; i < NUM_CAM_XFERS; i++) {                                                                      \
+		_(hmd->camera_xfers[i])                                                                                \
+	}                                                                                                              \
+	_(hmd->status_xfer)                                                                                            \
+	_(hmd->slam_xfer)                                                                                              \
+	_(hmd->led_detector_xfer)                                                                                      \
+	_(hmd->relocalizer_xfer)                                                                                       \
+	_(hmd->vd_xfer)                                                                                                \
+	_(hmd->gaze_xfer)
+#else
+#define TRANSFERS_LIST(_, hmd)                                                                                         \
+	_(hmd->status_xfer)                                                                                            \
+	_(hmd->slam_xfer)                                                                                              \
+	_(hmd->led_detector_xfer)                                                                                      \
+	_(hmd->relocalizer_xfer)                                                                                       \
+	_(hmd->vd_xfer)                                                                                                \
+	_(hmd->gaze_xfer)
+#endif
+
+static void psvr2_usb_stop(psvr2_hmd* hmd)
+{
+	hmd->data_lock.lock();
+
+	int ret = 0;
+
+#if SUPPORT_PSVR2_CAMERAS
+	for (int i = 0; i < NUM_CAM_XFERS; i++)
+	{                               
+		if(hmd->camera_xfers[i])
+		{
+			ret = libusb_cancel_transfer(hmd->camera_xfers[i]);
+			assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
+		}
+	} 
+#endif
+
+	if(hmd->status_xfer)
+	{
+		ret = libusb_cancel_transfer(hmd->status_xfer);
+		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
+	}
+
+	if(hmd->slam_xfer)
+	{
+		ret = libusb_cancel_transfer(hmd->slam_xfer);
+		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
+	}
+
+	if(hmd->led_detector_xfer)
+	{
+		ret = libusb_cancel_transfer(hmd->led_detector_xfer);
+		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
+	}
+
+	if(hmd->relocalizer_xfer)
+	{
+		ret = libusb_cancel_transfer(hmd->relocalizer_xfer);
+		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
+	}
+
+	if(hmd->vd_xfer)
+	{
+		ret = libusb_cancel_transfer(hmd->vd_xfer);
+		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
+	}
+
+#if SUPPORT_EYE_TRACKING
+	if(hmd->gaze_xfer)
+	{
+		ret = libusb_cancel_transfer(hmd->gaze_xfer);
+		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
+	}
+#endif
+
+	hmd->data_lock.unlock();
+}
+
+void psvr2_usb_destroy(psvr2_hmd* hmd)
+{
+#if SUPPORT_PSVR2_CAMERAS
+	for(int i = 0; i < NUM_CAM_XFERS; i++)
+	{
+		if(hmd->camera_xfers[i])
+		{
+			libusb_free_transfer(hmd->camera_xfers[i]);
+			hmd->camera_xfers[i] = nullptr;
+		}
+	}
+#endif
+
+	if(hmd->status_xfer)
+	{
+		libusb_free_transfer(hmd->status_xfer);
+		hmd->status_xfer = nullptr;
+	}
+
+	if(hmd->slam_xfer)
+	{
+		libusb_free_transfer(hmd->slam_xfer);
+		hmd->slam_xfer = nullptr;
+	}
+
+	if(hmd->led_detector_xfer)
+	{
+		libusb_free_transfer(hmd->led_detector_xfer);
+		hmd->led_detector_xfer = nullptr;
+	}
+
+	if(hmd->relocalizer_xfer)
+	{
+		libusb_free_transfer(hmd->relocalizer_xfer);
+		hmd->relocalizer_xfer = nullptr;
+	}
+
+	if(hmd->vd_xfer)
+	{
+		libusb_free_transfer(hmd->vd_xfer);
+		hmd->vd_xfer = nullptr;
+	}
+
+#if SUPPORT_EYE_TRACKING
+	if(hmd->gaze_xfer)
+	{
+		libusb_free_transfer(hmd->gaze_xfer);
+		hmd->gaze_xfer = nullptr;
+	}
+#endif
+}
+
+static void psvr2_hmd_destroy(psvr2_hmd* hmd)
+{
+	stop_gaze_keepalive_thread(hmd);
+
+	//os_thread_helper_lock(&hmd->usb_thread);
+	hmd->usb_complete = 1;
+	//os_thread_helper_unlock(&hmd->usb_thread);
+	//os_thread_helper_destroy(&hmd->usb_thread);
+
+	psvr2_usb_stop(hmd);
+	psvr2_usb_destroy(hmd);
+
+	// @note We appear to be hitting a bug in libusb, so this is commented out
+	//       see: https://github.com/libusb/libusb/issues/1605
+	// if (hmd->dev != NULL) 
+	// {
+	// 	libusb_close(hmd->dev);
+	// }
+
+	if(hmd->ctx != NULL)
+	{
+		libusb_exit(hmd->ctx);
+		hmd->ctx = nullptr;
+	}
+
+	//u_var_remove_root(hmd);
+
+	//m_ff_vec3_f32_free(&hmd->ff_gyro);
+	//m_relation_history_destroy(&hmd->slam_relation_history);
+	//os_mutex_destroy(&hmd->data_lock);
+	//u_device_free(&hmd->base);
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -1126,12 +1360,31 @@ int main(int argc, char* argv[])
 
 #if 1
 	psvr2_hmd hmd = {};
+
+	bool usb_open_ok = psvr2_usb_open(&hmd);
+
+	if(!usb_open_ok)
+	{
+		return -1;
+	}
+
 	bool start_ok = psvr2_usb_start(&hmd);
 
 	if(!start_ok)
 	{
 		return -1;
 	}
+
+	bool keep_going = true;
+
+	while(keep_going)
+	{
+		std::this_thread::sleep_for(4ms);
+	}
+
+	psvr2_hmd_destroy(&hmd);
+
+	return 0;
 
 #else
 	const char* device_name = NULL;
@@ -1183,7 +1436,6 @@ int main(int argc, char* argv[])
 	}
 
 	libusb_exit(NULL);
-#endif
-
 	return 0;
+#endif
 }
