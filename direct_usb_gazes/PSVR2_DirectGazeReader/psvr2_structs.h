@@ -12,6 +12,7 @@
 
 #define SUPPORT_PSVR2_SLAM_TRACKING 0
 #define SUPPORT_PSVR2_STATUS 0
+#define SUPPORT_PSVR2_LED 0
 
 #define SUPPORT_EYE_TRACKING 1
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
@@ -454,10 +455,10 @@ struct psvr2_hmd
 	libusb_transfer* status_xfer = nullptr;
 #endif // SUPPORT_PSVR2_STATUS
 
-#if 1
+#if SUPPORT_PSVR2_LED
 	// LD EP9 (bulk) transfer
 	libusb_transfer* led_detector_xfer = nullptr;
-#endif
+#endif // SUPPORT_PSVR2_LED
 
 #if 1
 	// RP EP10 (bulk) transfer
