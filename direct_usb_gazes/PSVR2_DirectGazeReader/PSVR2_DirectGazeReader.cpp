@@ -480,7 +480,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
-		const psvr2_per_eye_gaze& psvr2_per_eye_gaze_data = (eye == LEFT) ? input_gaze_state.gaze_data_.left_gaze_ : input_gaze_state.gaze_data_.right_gaze_;
+		const psvr2_per_eye_gaze& psvr2_per_eye_gaze_data = input_gaze_state.gaze_data_.gazes_[eye];
 		openxr_per_eye_gaze& openxr_per_eye_gaze = hmd->openxr_eye_tracking_data_.openxr_gazes_[eye];
 
 		const vec3 gaze_point_m = convert_m_to_mm(psvr2_per_eye_gaze_data.gaze_point_mm);

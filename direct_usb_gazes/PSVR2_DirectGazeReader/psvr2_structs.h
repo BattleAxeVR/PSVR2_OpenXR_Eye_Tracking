@@ -320,8 +320,7 @@ struct psvr2_gaze_packet
 	uint dumm16 = 0;
 	float dummy17 = 0.0f;
 
-	psvr2_per_eye_gaze left_gaze_;
-	psvr2_per_eye_gaze right_gaze_;
+	psvr2_per_eye_gaze gazes_[NUM_EYES];
 	psvr2_combined_gaze combined_gaze_;
 };
 
