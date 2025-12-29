@@ -10,7 +10,8 @@
 #include <thread>
 #include <chrono>
 
-#define SUPPORT_SLAM_TRACKING 0
+#define SUPPORT_PSVR2_SLAM_TRACKING 0
+#define SUPPORT_PSVR2_STATUS 0
 
 #define SUPPORT_EYE_TRACKING 1
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
@@ -104,7 +105,7 @@ vec3 convert_psvr2_direction_to_openxr(const vec3& psvr2_direction);
 float square(const float input);
 vec3 safe_normalize(const vec3& input);
 
-#if SUPPORT_SLAM_TRACKING
+#if SUPPORT_PSVR2_SLAM_TRACKING
 struct imu_record
 {
 	uint vts_us;
@@ -123,7 +124,6 @@ struct slam_record
 	double orient[4]; //< Orientation quaternion
 	uint8_t remainder[470];
 };
-
 
 #pragma pack(push, 1)
 struct imu_usb_record
@@ -150,9 +150,9 @@ struct slam_usb_record
 };
 #pragma pack(pop)
 
-#endif // SUPPORT_SLAM_TRACKING
+#endif // SUPPORT_PSVR2_SLAM_TRACKING
 
-#if 1
+#if SUPPORT_PSVR2_STATUS
 #pragma pack(push, 1)
 struct status_record_hdr
 {
@@ -164,7 +164,12 @@ struct status_record_hdr
 
 	uint8_t remainder[26];
 };
+#pragma pack(pop)
 
+#endif // SUPPORT_PSVR2_STATUS
+
+// Sony control packets are needed no matter what
+#pragma pack(push, 1)
 struct sie_ctrl_pkt
 {
 	int16_t report_id;
@@ -174,7 +179,6 @@ struct sie_ctrl_pkt
 };
 #pragma pack(pop)
 
-#endif // 
 
 #if SUPPORT_PSVR2_CAMERAS
 enum psvr2_camera_mode
@@ -406,7 +410,7 @@ struct psvr2_hmd
 	//u_var_button brightness_btn;
 	float brightness = 1.0f;
 
-#if SUPPORT_SLAM_TRACKING
+#if SUPPORT_PSVR2_SLAM_TRACKING
 	// IMU input data
 	uint last_imu_vts_us = 0;   //< Last VTS timestamp, in microseconds
 	uint16_t last_imu_ts = 0; //< Last IMU timestamp, in microseconds
@@ -433,6 +437,9 @@ struct psvr2_hmd
 	timepoint_ns last_imu_vts_ns = 0;
 	timepoint_ns last_slam_vts_ns = 0;
 
+	// Tracking state 
+	//m_relation_history* slam_relation_history = nullptr;
+	//m_ff_vec3_f32* ff_gyro = nullptr;
 #endif
 
 	// USB communication
@@ -442,17 +449,25 @@ struct psvr2_hmd
 	int usb_complete = 0;
 	int usb_active_xfers = 0;
 
+#if SUPPORT_PSVR2_STATUS
 	// Status report
 	libusb_transfer* status_xfer = nullptr;
+#endif // SUPPORT_PSVR2_STATUS
 
+#if 1
 	// LD EP9 (bulk) transfer
 	libusb_transfer* led_detector_xfer = nullptr;
+#endif
 
+#if 1
 	// RP EP10 (bulk) transfer
 	libusb_transfer* relocalizer_xfer = nullptr;
+#endif
 
+#if 1
 	// VD EP11 (bulk) transfer
 	libusb_transfer* vd_xfer = nullptr;
+#endif
 
 #if SUPPORT_EYE_TRACKING
 	// Gaze transfer
@@ -472,10 +487,6 @@ struct psvr2_hmd
 
 	//time_duration_ns hw2mono_vts = 0;
 	//time_duration_ns hw2mono_imu = 0;
-
-	// Tracking state 
-	//m_relation_history* slam_relation_history = nullptr;
-	//m_ff_vec3_f32* ff_gyro = nullptr;
 
 #if SUPPORT_EYE_TRACKING
 	openxr_eye_tracking_data openxr_eye_tracking_data_;
