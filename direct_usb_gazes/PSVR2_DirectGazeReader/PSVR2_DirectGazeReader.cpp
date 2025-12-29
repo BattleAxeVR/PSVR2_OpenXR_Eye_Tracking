@@ -5,6 +5,54 @@
 
 #include "psvr2_structs.h"
 
+using namespace std::chrono_literals;
+
+vec3 convert_m_to_mm(const vec3& input_m)
+{
+	vec3 output_mm = input_m;
+	output_mm.x *= METERS_TO_MM;
+	output_mm.y *= METERS_TO_MM;
+	output_mm.z *= METERS_TO_MM;
+	return output_mm;
+}
+
+vec3 convert_mm_to_m(const vec3& input_mm)
+{
+	vec3 output_meters = input_mm;
+	output_meters.x *= MM_TO_METERS;
+	output_meters.y *= MM_TO_METERS;
+	output_meters.z *= MM_TO_METERS;
+	return output_meters;
+}
+
+vec3 convert_psvr2_direction_to_openxr(const vec3& psvr2_direction)
+{
+	vec3 openxr_direction = psvr2_direction;
+	openxr_direction.x *= -1.0f;
+	openxr_direction.z *= -1.0f;
+	return openxr_direction;
+}
+
+float square(const float input)
+{
+	return input * input;
+}
+
+vec3 safe_normalize(const vec3& input)
+{
+	vec3 normalized = input;
+	float norm_sq = square(input.x) + square(input.y) + square(input.z);
+	float norm = sqrt(norm_sq);
+	float reciprocal = (norm > 0.0f) ? 1.0f / norm : 1.0f;
+
+	normalized.x *= reciprocal;
+	normalized.y *= reciprocal;
+	normalized.z *= reciprocal;
+
+	return normalized;
+}
+
+
 #if 0
 int verbose = 0;
 
@@ -437,27 +485,15 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
-		const psvr2_per_eye_gaze& input_per_eye_gaze_data = (eye == LEFT) ? input_gaze_state.gaze_data_.left_gaze_ : input_gaze_state.gaze_data_.right_gaze_;
+		const psvr2_per_eye_gaze& psvr2_per_eye_gaze_data = (eye == LEFT) ? input_gaze_state.gaze_data_.left_gaze_ : input_gaze_state.gaze_data_.right_gaze_;
+		openxr_per_eye_gaze& openxr_per_eye_gaze = hmd->et_data.openxr_gazes_[eye];
 
-		vec3 gaze_point = input_per_eye_gaze_data.gaze_point;
+		const vec3 gaze_point_mm = convert_m_to_mm(psvr2_per_eye_gaze_data.gaze_point);
+		const vec3 gaze_point_openxr_mm = convert_psvr2_direction_to_openxr(gaze_point_mm);
+		const vec3 gaze_direction_openxr = convert_psvr2_direction_to_openxr(psvr2_per_eye_gaze_data.gaze_direction);
 
-		// convert to millimeters
-		gaze_point.x *= 0.001f;
-		gaze_point.y *= 0.001f;
-		gaze_point.z *= 0.001f;
-
-		// fix reference frame / coordinates
-		gaze_point.x *= -1;
-		gaze_point.z *= -1;
-
-		vec3 gaze_direction = input_per_eye_gaze_data.gaze_direction;
-		gaze_direction.x *= -1;
-		gaze_direction.z *= -1;
-
-		psvr2_per_eye_gaze& output_per_eye_gaze = hmd->et_data.gazes_[eye];
-
-#if 0
-		if(output_per_eye_gaze.is_blink_state_valid && (output_per_eye_gaze.blink != output_per_eye_gaze.blink_interp))
+#if SUPPORT_LERPED_BLINK_STATES
+		if(openxr_per_eye_gaze.is_blink_state_valid && (openxr_per_eye_gaze.blink != openxr_per_eye_gaze.blink_interp))
 		{
 			const timepoint_ns blink_time_ns = U_TIME_1MS_IN_NS * 100LLU;
 
@@ -467,67 +503,63 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 			// direction interp is moving
 			float dir = gaze.blink_state ? 1 : -1;
 
-			output_per_eye_gaze->blink_interp += dir * blink_delta;
-			output_per_eye_gaze->blink_interp = std::clamp(output_per_eye_gaze->blink_interp, 0, 1);
+			openxr_per_eye_gaze.blink_interp += dir * blink_delta;
+			openxr_per_eye_gaze.blink_interp = std::clamp(openxr_per_eye_gaze.blink_interp, 0, 1);
 		}
 #endif
 
-		if(input_per_eye_gaze_data.is_gaze_direction_valid)
+#if SUPPORT_FILTERED_GAZE_DIRECTIONS
+		if(psvr2_per_eye_gaze_data.is_gaze_direction_valid)
 		{
-#if 0
+
 			m_filter_euro_vec3_run(&eye_data->gaze_direction_filter, timestamp_ns, &gaze_direction, &eye_data->filtered_gaze_direction);
 			math_vec3_normalize(&eye_data->filtered_gaze_direction);
-#endif
 		}
+#endif
 
-		output_per_eye_gaze.is_blink_state_valid = input_per_eye_gaze_data.is_blink_state_valid;
-		output_per_eye_gaze.blink_state = input_per_eye_gaze_data.blink_state;
+		openxr_per_eye_gaze.is_blink_state_valid = psvr2_per_eye_gaze_data.is_blink_state_valid;
+		openxr_per_eye_gaze.blink_state = psvr2_per_eye_gaze_data.blink_state;
 		
-		output_per_eye_gaze.is_gaze_direction_valid = input_per_eye_gaze_data.is_gaze_direction_valid;
-		output_per_eye_gaze.gaze_direction = gaze_direction;
+		openxr_per_eye_gaze.is_gaze_direction_valid = psvr2_per_eye_gaze_data.is_gaze_direction_valid;
+		openxr_per_eye_gaze.gaze_direction = gaze_direction_openxr;
 
-		output_per_eye_gaze.is_gaze_point_valid = input_per_eye_gaze_data.is_gaze_point_valid;
-		output_per_eye_gaze.gaze_point = gaze_point;
+		openxr_per_eye_gaze.is_gaze_point_valid = psvr2_per_eye_gaze_data.is_gaze_point_valid;
+		openxr_per_eye_gaze.gaze_point = gaze_point_openxr_mm;
 		
-		output_per_eye_gaze.is_pupil_diameter_valid = input_per_eye_gaze_data.is_pupil_diameter_valid;
-		output_per_eye_gaze.pupil_diameter = input_per_eye_gaze_data.pupil_diameter * 0.001f; // convert to meters
+		openxr_per_eye_gaze.is_pupil_diameter_valid = psvr2_per_eye_gaze_data.is_pupil_diameter_valid;
+		openxr_per_eye_gaze.pupil_diameter = psvr2_per_eye_gaze_data.pupil_diameter * 0.001f; // convert to meters
 	}
 
 	{
-		psvr2_combined_gaze& output_combined_gaze = hmd->et_data.combined_gaze_;
+		const psvr2_combined_gaze& input_combined_gaze = input_gaze_state.gaze_data_.combined_gaze_;
+		openxr_combined_gaze& openxr_combined_gaze = hmd->et_data.openxr_combined_gaze_;
 
-		vec3 gaze_direction = input_gaze_state.gaze_data_.combined_gaze_.normalized_gaze_direction;
+		const vec3 normalized_gaze_direction_openxr = convert_psvr2_direction_to_openxr(input_combined_gaze.normalized_gaze_direction);
+		const vec3 gaze_point_mm = convert_m_to_mm(input_combined_gaze.gaze_point);
+		const vec3 gaze_point_openxr_mm = convert_psvr2_direction_to_openxr(gaze_point_mm);
 
-		// flip to correct coordinate space
-		gaze_direction.x *= -1;
-		gaze_direction.z *= -1;
-
-
-		vec3 gaze_point = combined->gaze_point_3d;
-
-		// convert to millimeters
-		gaze_point.x *= 0.001f;
-		gaze_point.y *= 0.001f;
-		gaze_point.z *= 0.001f;
-
-		gaze_point.x *= -1;
-		gaze_point.z *= -1;
-
-#if 0
-		psvr2_et_combined_data* eye_data = &hmd->et_data.combined;
-
+#if SUPPORT_FILTERED_GAZE_DIRECTIONS
 		if(combined->normalized_gaze_valid)
 		{
 			m_filter_euro_vec3_run(&eye_data->gaze_direction_filter, timestamp_ns, &gaze_direction, &eye_data->filtered_gaze_direction);
 			math_vec3_normalize(&eye_data->filtered_gaze_direction);
 		}
-
-		eye_data->gaze_direction_valid = combined->normalized_gaze_valid;
-		eye_data->gaze_direction = gaze_direction;
-		eye_data->gaze_point_valid = combined->gaze_point_valid;
-		eye_data->gaze_point = gaze_point;
-		eye_data->is_valid = combined->is_valid;
 #endif
+
+		uint is_gaze_point_valid = 0;
+		vec3 gaze_point;
+
+		uint is_normalized_gaze_direction_valid = 0;
+		vec3 normalized_gaze_direction;
+
+		uint is_valid = 0;
+		uint timestamp = 0;
+
+		openxr_combined_gaze.is_normalized_gaze_direction_valid = input_combined_gaze.is_normalized_gaze_direction_valid;
+		openxr_combined_gaze.normalized_gaze_direction = normalized_gaze_direction_openxr;
+		openxr_combined_gaze.is_gaze_point_valid = input_combined_gaze.is_gaze_point_valid;
+		openxr_combined_gaze.gaze_point = gaze_point_openxr_mm;
+		openxr_combined_gaze.is_valid = input_combined_gaze.is_valid;
 	}
 
 	hmd->et_data.data_mutex.unlock();
@@ -571,9 +603,7 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
 
-#if 0
-
-	if((size_t)xfer->actual_length >= sizeof(pkt_gaze_state))
+	if((size_t)xfer->actual_length >= sizeof(psvr2_gaze_state))
 	{
 		//PSVR2_TRACE(hmd, "Gaze - %d bytes", xfer->actual_length);
 		//PSVR2_TRACE_HEX(hmd, xfer->buffer, xfer->actual_length);
@@ -586,12 +616,9 @@ static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
 	}
 
 	libusb_submit_transfer(xfer);
-#endif
 }
 
 bool keep_running_eye_tracking_control_thread = true;
-
-using namespace std::chrono_literals;
 
 static void* psvr2_eye_tracking_control_thread(void* usrptr)
 {
@@ -738,7 +765,9 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 		u_var_add_gui_header(&hmd->et_data, NULL, i == 0 ? "Left Eye" : "Right Eye");
 		psvr2_et_eye_data* eye = &hmd->et_data.eyes[i];
 
+#if SUPPORT_FILTERED_GAZE_DIRECTIONS
 		m_filter_euro_vec3_init(&eye->gaze_direction_filter, M_EURO_FILTER_EYE_TRACKING_FCMIN, M_EURO_FILTER_EYE_TRACKING_FCMIN_D, M_EURO_FILTER_EYE_TRACKING_BETA);
+#endif
 
 		u_var_add_bool(&hmd->et_data, &eye->blink_valid, "Blink Valid");
 		u_var_add_bool(&hmd->et_data, &eye->blink, "Blink");

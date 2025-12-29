@@ -12,6 +12,9 @@
 
 #define SUPPORT_EYE_TRACKING 1
 #define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
+#define SUPPORT_FILTERED_GAZE_DIRECTIONS (SUPPORT_EYE_TRACKING && 0)
+#define SUPPORT_LERPED_BLINK_STATES (SUPPORT_EYE_TRACKING && 0)
+
 #define SUPPORT_PSVR2_CAMERAS 0
 #define SUPPORT_FACE_TRACKING (SUPPORT_EYE_TRACKING && 0)
 
@@ -69,8 +72,31 @@
 #define IMU_FREQ 2000.0f
 #define IMU_PERIOD_NS ((time_duration_ns)(1000000000.0f / IMU_FREQ))
 
+#define METERS_TO_MM 1000.0f
+#define MM_TO_METERS 0.001f
+
 typedef uint32_t uint;
 typedef uint64_t timepoint_ns;
+
+
+struct vec2
+{
+	float x = 0.0f;
+	float y = 0.0f;
+};
+
+struct vec3
+{
+	float x = 0.0f;
+	float y = 0.0f;
+	float z = 0.0f;
+};
+
+vec3 convert_m_to_mm(const vec3& input_m);
+vec3 convert_mm_to_m(const vec3& input_mm);
+vec3 convert_psvr2_direction_to_openxr(const vec3& psvr2_direction);
+float square(const float input);
+vec3 safe_normalize(const vec3& input);
 
 struct imu_record
 {
@@ -176,19 +202,6 @@ enum psvr2_camera_mode
 };
 #endif // SUPPORT_PSVR2_CAMERAS
 
-struct vec2
-{
-	float x = 0.0f;
-	float y = 0.0f;
-};
-
-struct vec3
-{
-	float x = 0.0f;
-	float y = 0.0f;
-	float z = 0.0f;
-};
-
 enum psvr2_report_id
 {
 	PSVR2_REPORT_ID_SET_PERIPHERAL = 0x8,
@@ -231,6 +244,21 @@ struct psvr2_per_eye_gaze
 	uint blink_state = 0;
 };
 
+struct openxr_per_eye_gaze
+{
+	uint is_gaze_point_valid = 0;
+	vec3 gaze_point;
+
+	uint is_gaze_direction_valid = 0;
+	vec3 gaze_direction;
+
+	uint is_pupil_diameter_valid = 0;
+	float pupil_diameter = 0.0f;
+
+	uint is_blink_state_valid = 0;
+	uint blink_state = 0;
+};
+
 struct psvr2_combined_gaze
 {
 	uint is_gaze_point_valid = 0;
@@ -249,6 +277,18 @@ struct psvr2_combined_gaze
 	vec3 dummy3;
 	vec3 dummy4;
 	vec3 dummy5;
+};
+
+struct openxr_combined_gaze
+{
+	uint is_gaze_point_valid = 0;
+	vec3 gaze_point;
+
+	uint is_normalized_gaze_direction_valid = 0;
+	vec3 normalized_gaze_direction;
+
+	uint is_valid = 0;
+	uint timestamp = 0;
 };
 
 struct psvr2_gaze_packet
@@ -307,8 +347,8 @@ struct psvr2_et_data
 
 	//m_relation_history* gaze_relation_history = nullptr;
 	
-	psvr2_per_eye_gaze gazes_[NUM_EYES];
-	psvr2_combined_gaze combined_gaze_;
+	openxr_per_eye_gaze openxr_gazes_[NUM_EYES];
+	openxr_combined_gaze openxr_combined_gaze_;
 
 	bool processed_sample_packet;
 
