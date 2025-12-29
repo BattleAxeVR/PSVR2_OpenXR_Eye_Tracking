@@ -415,7 +415,7 @@ static void* psvr2_eye_tracking_control_thread(void* usrptr)
 
 		hmd->openxr_eye_tracking_data_.enabled = enable;
 
-		std::this_thread::sleep_for(1s);
+		std::this_thread::sleep_for(100ms);
 	}
 
 	return NULL;

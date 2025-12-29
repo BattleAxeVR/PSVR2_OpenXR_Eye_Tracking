@@ -377,15 +377,15 @@ struct openxr_eye_tracking_data
 
 struct psvr2_hmd
 {
+	libusb_context* ctx = nullptr;
+	libusb_device_handle* dev = nullptr;
+
+	int usb_complete = 0;
+	int usb_active_xfers = 0;
+
 	std::thread usb_thread;
 	std::mutex data_lock;
-	//xrt_device base;
 	//xrt_pose pose;
-
-	//enum u_logging_level log_level;
-
-	// Device status
-	uint8_t dprx_status = 0; //< DisplayPort receiver status
 
 	//xrt_atomic_s32_t proximity_sensor; //< Atomic state for whether the proximity sensor is triggered
 
@@ -445,15 +445,8 @@ struct psvr2_hmd
 	//m_ff_vec3_f32* ff_gyro = nullptr;
 #endif
 
-	// USB communication
-	libusb_context* ctx = nullptr;
-	libusb_device_handle* dev = nullptr;
-
-	int usb_complete = 0;
-	int usb_active_xfers = 0;
-
 #if SUPPORT_PSVR2_STATUS
-	// Status report
+	uint8_t dprx_status = 0; //< DisplayPort receiver status
 	libusb_transfer* status_xfer = nullptr;
 #endif // SUPPORT_PSVR2_STATUS
 
