@@ -54,7 +54,7 @@ vec3 safe_normalize(const vec3& input)
 }
 
 
-bool psvr2_usb_xfer_continue(struct libusb_transfer* xfer, const char* type)
+bool psvr2_usb_xfer_continue(libusb_transfer* xfer, const char* type)
 {
 	psvr2_hmd* hmd = (psvr2_hmd*)xfer->user_data;
 
@@ -574,7 +574,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 	{
 		if(hmd->openxr_eye_tracking_data_.processed_sample_packet)
 		{
-			out_value->face_expression_set_android = (struct xrt_facial_expression_set_android){
+			out_value->face_expression_set_android = (xrt_facial_expression_set_android){
 				.state = XRT_FACE_TRACKING_STATE_STOPPED_ANDROID,
 				.is_valid = false,
 			};
@@ -582,7 +582,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 			break;
 		}
 
-		out_value->face_expression_set_android = (struct xrt_facial_expression_set_android){
+		out_value->face_expression_set_android = (xrt_facial_expression_set_android){
 			.parameters =
 				{
 					[XRT_FACE_PARAMETER_INDICES_EYES_CLOSED_L_ANDROID] = blink[0],
@@ -613,7 +613,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 	{
 		if(hmd->openxr_eye_tracking_data_.processed_sample_packet)
 		{
-			out_value->face_expression_set2_fb = (struct xrt_facial_expression_set2_fb){
+			out_value->face_expression_set2_fb = (xrt_facial_expression_set2_fb){
 				.data_source = XRT_FACE_TRACKING_DATA_SOURCE2_VISUAL_FB,
 				.is_valid = false,
 			};
@@ -621,7 +621,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 			break;
 		}
 
-		out_value->face_expression_set2_fb = (struct xrt_facial_expression_set2_fb){
+		out_value->face_expression_set2_fb = (xrt_facial_expression_set2_fb){
 			.weights =
 				{
 					[XRT_FACE_EXPRESSION2_EYES_CLOSED_L_FB] = blink[0],
@@ -651,7 +651,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 	{
 		if(hmd->openxr_eye_tracking_data_.processed_sample_packet)
 		{
-			out_value->eye_expression_set_htc = (struct xrt_facial_eye_expression_set_htc){
+			out_value->eye_expression_set_htc = (xrt_facial_eye_expression_set_htc){
 				.base =
 					{
 						.is_active = false,
@@ -661,7 +661,7 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 			break;
 		}
 
-		out_value->eye_expression_set_htc = (struct xrt_facial_eye_expression_set_htc){
+		out_value->eye_expression_set_htc = (xrt_facial_eye_expression_set_htc){
 			.base =
 				{
 					.is_active = hmd->openxr_eye_tracking_data_.processed_sample_packet && hmd->openxr_eye_tracking_data_.enabled,
