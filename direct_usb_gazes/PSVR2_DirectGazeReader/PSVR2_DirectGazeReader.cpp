@@ -415,7 +415,7 @@ static void* psvr2_eye_tracking_control_thread(void* usrptr)
 
 		hmd->openxr_eye_tracking_data_.enabled = enable;
 
-		std::this_thread::sleep_for(100ms);
+		std::this_thread::sleep_for(5ms);
 	}
 
 	return NULL;
@@ -672,25 +672,25 @@ xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facia
 }
 #endif // SUPPORT_FACE_TRACKING
 
-#if 1
+#if SUPPORT_PSVR2_STATUS
 uint8_t status_buf[USB_STATUS_XFER_SIZE] = { 0 };
-#endif
+#endif // SUPPORT_PSVR2_STATUS
 
 #if SUPPORT_PSVR2_SLAM_TRACKING
 uint8_t slam_buf[USB_SLAM_XFER_SIZE] = { 0 };
 #endif // SUPPORT_PSVR2_SLAM_TRACKING
 
-#if 1
+#if SUPPORT_PSVR2_LED_DETECTOR
 uint8_t led_detector_buf[USB_LD_XFER_SIZE] = { 0 };
-#endif
+#endif // SUPPORT_PSVR2_LED_DETECTOR
 
-#if 1
+#if SUPPORT_PSVR2_RELOCALIZER
 uint8_t relocalizer_buf[USB_RP_XFER_SIZE] = { 0 };
-#endif
+#endif // SUPPORT_PSVR2_RELOCALIZER
 
-#if 1
+#if SUPPORT_PSVR2_VD
 uint8_t vd_buf[USB_VD_XFER_SIZE] = { 0 };
-#endif
+#endif // SUPPORT_PSVR2_VD
 
 #if SUPPORT_PSVR2_CAMERAS
 uint8_t recv_buf[NUM_CAM_XFERS][USB_CAM_MODE10_XFER_SIZE] = { 0 };
