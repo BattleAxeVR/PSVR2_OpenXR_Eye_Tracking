@@ -226,13 +226,13 @@ enum psvr2_set_peripheral_subcommand
 struct psvr2_per_eye_gaze
 {
 	uint is_gaze_point_valid = 0;
-	vec3 gaze_point;
+	vec3 gaze_point_mm;
 
 	uint is_gaze_direction_valid = 0;
 	vec3 gaze_direction;
 
 	uint is_pupil_diameter_valid = 0;
-	float pupil_diameter = 0.0f;
+	float pupil_diameter_mm = 0.0f;
 
 	uint dummy0 = 0;
 	vec2 dummy1;
@@ -247,13 +247,13 @@ struct psvr2_per_eye_gaze
 struct openxr_per_eye_gaze
 {
 	uint is_gaze_point_valid = 0;
-	vec3 gaze_point;
+	vec3 gaze_point_m;
 
 	uint is_gaze_direction_valid = 0;
 	vec3 gaze_direction;
 
 	uint is_pupil_diameter_valid = 0;
-	float pupil_diameter = 0.0f;
+	float pupil_diameter_m = 0.0f;
 
 	uint is_blink_state_valid = 0;
 	uint blink_state = 0;
@@ -262,7 +262,7 @@ struct openxr_per_eye_gaze
 struct psvr2_combined_gaze
 {
 	uint is_gaze_point_valid = 0;
-	vec3 gaze_point;
+	vec3 gaze_point_mm;
 
 	uint is_normalized_gaze_direction_valid = 0;
 	vec3 normalized_gaze_direction;
@@ -282,7 +282,7 @@ struct psvr2_combined_gaze
 struct openxr_combined_gaze
 {
 	uint is_gaze_point_valid = 0;
-	vec3 gaze_point;
+	vec3 gaze_point_m;
 
 	uint is_normalized_gaze_direction_valid = 0;
 	vec3 normalized_gaze_direction;

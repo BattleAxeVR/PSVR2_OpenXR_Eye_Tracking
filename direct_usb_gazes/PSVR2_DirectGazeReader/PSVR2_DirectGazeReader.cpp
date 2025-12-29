@@ -483,8 +483,8 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		const psvr2_per_eye_gaze& psvr2_per_eye_gaze_data = (eye == LEFT) ? input_gaze_state.gaze_data_.left_gaze_ : input_gaze_state.gaze_data_.right_gaze_;
 		openxr_per_eye_gaze& openxr_per_eye_gaze = hmd->openxr_eye_tracking_data_.openxr_gazes_[eye];
 
-		const vec3 gaze_point_mm = convert_m_to_mm(psvr2_per_eye_gaze_data.gaze_point);
-		const vec3 gaze_point_openxr_mm = convert_psvr2_direction_to_openxr(gaze_point_mm);
+		const vec3 gaze_point_m = convert_m_to_mm(psvr2_per_eye_gaze_data.gaze_point_mm);
+		const vec3 gaze_point_openxr_m = convert_psvr2_direction_to_openxr(gaze_point_m);
 		const vec3 gaze_direction_openxr = convert_psvr2_direction_to_openxr(psvr2_per_eye_gaze_data.gaze_direction);
 
 #if SUPPORT_LERPED_BLINK_STATES
@@ -519,10 +519,10 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		openxr_per_eye_gaze.gaze_direction = gaze_direction_openxr;
 
 		openxr_per_eye_gaze.is_gaze_point_valid = psvr2_per_eye_gaze_data.is_gaze_point_valid;
-		openxr_per_eye_gaze.gaze_point = gaze_point_openxr_mm;
+		openxr_per_eye_gaze.gaze_point_m = gaze_point_openxr_m;
 		
 		openxr_per_eye_gaze.is_pupil_diameter_valid = psvr2_per_eye_gaze_data.is_pupil_diameter_valid;
-		openxr_per_eye_gaze.pupil_diameter = psvr2_per_eye_gaze_data.pupil_diameter * 0.001f; // convert to meters
+		openxr_per_eye_gaze.pupil_diameter_m = psvr2_per_eye_gaze_data.pupil_diameter_mm * MM_TO_METERS;
 	}
 
 	{
@@ -530,8 +530,8 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		openxr_combined_gaze& openxr_combined_gaze = hmd->openxr_eye_tracking_data_.openxr_combined_gaze_;
 
 		const vec3 normalized_gaze_direction_openxr = convert_psvr2_direction_to_openxr(input_combined_gaze.normalized_gaze_direction);
-		const vec3 gaze_point_mm = convert_m_to_mm(input_combined_gaze.gaze_point);
-		const vec3 gaze_point_openxr_mm = convert_psvr2_direction_to_openxr(gaze_point_mm);
+		const vec3 gaze_point_m = convert_mm_to_m(input_combined_gaze.gaze_point_mm);
+		const vec3 gaze_point_openxr_m = convert_psvr2_direction_to_openxr(gaze_point_m);
 
 #if SUPPORT_FILTERED_GAZE_DIRECTIONS
 		if(combined->normalized_gaze_valid)
@@ -553,7 +553,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		openxr_combined_gaze.is_normalized_gaze_direction_valid = input_combined_gaze.is_normalized_gaze_direction_valid;
 		openxr_combined_gaze.normalized_gaze_direction = normalized_gaze_direction_openxr;
 		openxr_combined_gaze.is_gaze_point_valid = input_combined_gaze.is_gaze_point_valid;
-		openxr_combined_gaze.gaze_point = gaze_point_openxr_mm;
+		openxr_combined_gaze.gaze_point_m = gaze_point_openxr_m;
 		openxr_combined_gaze.is_valid = input_combined_gaze.is_valid;
 	}
 
@@ -576,13 +576,11 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 
 	if(hmd->openxr_eye_tracking_data_.combined.gaze_direction_valid)
 	{
-		gaze_relation.relation_flags =
-			XRT_SPACE_RELATION_POSITION_VALID_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT | XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT;
+		gaze_relation.relation_flags = XRT_SPACE_RELATION_POSITION_VALID_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT | XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT;
 	}
 
 	//m_relation_history_push(hmd->openxr_eye_tracking_data_.gaze_relation_history, &gaze_relation, timestamp_ns);
 #endif
-
 }
 
 static void LIBUSB_CALL gaze_xfer_cb(libusb_transfer* xfer)
