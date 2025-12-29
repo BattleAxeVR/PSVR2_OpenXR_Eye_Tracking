@@ -214,7 +214,7 @@ bool set_camera_mode(psvr2_hmd* hmd, enum psvr2_camera_mode mode)
 }
 #endif // SUPPORT_PSVR2_CAMERAS
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 
 uint8_t gaze_buf[USB_GAZE_XFER_SIZE] = { 0 };
 
@@ -257,7 +257,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 	hmd->openxr_eye_tracking_data_.last_remote_report_sample_time_ns = timestamp_ns;
 	hmd->openxr_eye_tracking_data_.data_mutex.lock();
 
-#if SUPPORT_PER_EYE_GAZES
+#if SUPPORT_PSVR2_PER_EYE_GAZES
 	for(int eye = LEFT; eye < NUM_EYES; eye++)
 	{
 		const psvr2_per_eye_gaze& psvr2_per_eye_gaze_data = input_gaze_state.gaze_data_.gazes_[eye];
@@ -311,9 +311,9 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		openxr_per_eye_gaze.is_pupil_diameter_valid = psvr2_per_eye_gaze_data.is_pupil_diameter_valid;
 		openxr_per_eye_gaze.pupil_diameter_m = psvr2_per_eye_gaze_data.pupil_diameter_mm * MM_TO_METERS;
 	}
-#endif // SUPPORT_PER_EYE_GAZES
+#endif // SUPPORT_PSVR2_PER_EYE_GAZES
 
-#if SUPPORT_COMBINED_GAZE
+#if SUPPORT_PSVR2_COMBINED_GAZE
 	{
 		const psvr2_combined_gaze& input_combined_gaze = input_gaze_state.gaze_data_.combined_gaze_;
 		openxr_combined_gaze& openxr_combined_gaze = hmd->openxr_eye_tracking_data_.openxr_combined_gaze_;
@@ -353,7 +353,7 @@ static void process_gaze_packet(psvr2_hmd* hmd, uint8_t* buf, size_t bytes_read)
 		openxr_combined_gaze.gaze_point_m = gaze_point_openxr_m;
 		openxr_combined_gaze.is_valid = input_combined_gaze.is_valid;
 	}
-#endif // SUPPORT_COMBINED_GAZE
+#endif // SUPPORT_PSVR2_COMBINED_GAZE
 
 	hmd->openxr_eye_tracking_data_.data_mutex.unlock();
 
@@ -518,7 +518,7 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd)
 
 	return 0;
 }
-#endif // SUPPORT_EYE_TRACKING
+#endif // SUPPORT_PSVR2_EYE_TRACKING
 
 #if SUPPORT_FACE_TRACKING
 xrt_result_t psvr2_get_face_tracking(xrt_device* xdev,	enum xrt_input_name facial_expression_type, int64_t at_timestamp_ns, xrt_facial_expression_set* out_value)
@@ -849,7 +849,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 	hmd->usb_active_xfers++;
 #endif // SUPPORT_PSVR2_VD
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 	res = psvr2_start_gaze_tracking(hmd);
 
 	if(res < 0)
@@ -857,7 +857,7 @@ bool psvr2_usb_start(psvr2_hmd* hmd)
 		printf("Could not start gaze tracking\n");
 		goto out;
 	}
-#endif // SUPPORT_EYE_TRACKING
+#endif // SUPPORT_PSVR2_EYE_TRACKING
 
 	result = true;
 
@@ -992,13 +992,13 @@ static void psvr2_usb_stop(psvr2_hmd* hmd)
 	}
 #endif // SUPPORT_PSVR2_VD
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 	if(hmd->gaze_xfer)
 	{
 		ret = libusb_cancel_transfer(hmd->gaze_xfer);
 		assert(ret == 0 || ret == LIBUSB_ERROR_NOT_FOUND);
 	}
-#endif // SUPPORT_EYE_TRACKING
+#endif // SUPPORT_PSVR2_EYE_TRACKING
 
 	hmd->data_lock.unlock();
 }
@@ -1056,13 +1056,13 @@ void psvr2_usb_destroy(psvr2_hmd* hmd)
 	}
 #endif // SUPPORT_PSVR2_VD
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 	if(hmd->gaze_xfer)
 	{
 		libusb_free_transfer(hmd->gaze_xfer);
 		hmd->gaze_xfer = nullptr;
 	}
-#endif // SUPPORT_EYE_TRACKING
+#endif // SUPPORT_PSVR2_EYE_TRACKING
 }
 
 static void psvr2_hmd_destroy(psvr2_hmd* hmd)

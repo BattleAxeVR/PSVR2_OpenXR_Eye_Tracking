@@ -12,20 +12,20 @@
 #define SUPPORT_PSVR2_RELOCALIZER 0
 #define SUPPORT_PSVR2_VD 0
 
-#define SUPPORT_EYE_TRACKING 1
+#define SUPPORT_PSVR2_EYE_TRACKING 1
 
-#define SUPPORT_PER_EYE_GAZES (SUPPORT_EYE_TRACKING && 1)
-#define ENABLE_DEBUG_LOG_PER_EYE_GAZES (SUPPORT_PER_EYE_GAZES && 0)
+#define SUPPORT_PSVR2_PER_EYE_GAZES (SUPPORT_PSVR2_EYE_TRACKING && 1)
+#define ENABLE_DEBUG_LOG_PER_EYE_GAZES (SUPPORT_PSVR2_PER_EYE_GAZES && 0)
 
-#define SUPPORT_COMBINED_GAZE (SUPPORT_EYE_TRACKING && 1)
-#define ENABLE_DEBUG_LOG_COMBINED_GAZE (SUPPORT_COMBINED_GAZE && 1)
+#define SUPPORT_PSVR2_COMBINED_GAZE (SUPPORT_PSVR2_EYE_TRACKING && 1)
+#define ENABLE_DEBUG_LOG_COMBINED_GAZE (SUPPORT_PSVR2_COMBINED_GAZE && 1)
 
-#define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_EYE_TRACKING && 0)
-#define SUPPORT_FILTERED_GAZE_DIRECTIONS (SUPPORT_EYE_TRACKING && 0)
-#define SUPPORT_LERPED_BLINK_STATES (SUPPORT_EYE_TRACKING && 0)
+#define SUPPORT_SONY_ET_CALIBRATION (SUPPORT_PSVR2_EYE_TRACKING && 0)
+#define SUPPORT_FILTERED_GAZE_DIRECTIONS (SUPPORT_PSVR2_EYE_TRACKING && 0)
+#define SUPPORT_LERPED_BLINK_STATES (SUPPORT_PSVR2_EYE_TRACKING && 0)
 
 #define SUPPORT_PSVR2_CAMERAS 0
-#define SUPPORT_FACE_TRACKING (SUPPORT_EYE_TRACKING && 0)
+#define SUPPORT_FACE_TRACKING (SUPPORT_PSVR2_EYE_TRACKING && 0)
 
 #ifndef NUM_EYES
 #define NUM_EYES 2
@@ -245,7 +245,7 @@ enum psvr2_set_peripheral_subcommand
 	PSVR2_SET_PERIPHERAL_SUBCMD_MOTOR = 0x01,
 };
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 struct psvr2_per_eye_gaze
 {
 	uint is_gaze_point_valid = 0;
@@ -374,7 +374,7 @@ struct openxr_eye_tracking_data
 	timepoint_ns last_remote_report_sample_time_ns = 0;
 
 };
-#endif // SUPPORT_EYE_TRACKING
+#endif // SUPPORT_PSVR2_EYE_TRACKING
 
 struct psvr2_hmd
 {
@@ -464,7 +464,7 @@ struct psvr2_hmd
 	libusb_transfer* vd_xfer = nullptr;
 #endif // SUPPORT_PSVR2_VD
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 	// Gaze transfer
 	libusb_transfer* gaze_xfer = nullptr;
 #endif
@@ -483,7 +483,7 @@ struct psvr2_hmd
 	//time_duration_ns hw2mono_vts = 0;
 	//time_duration_ns hw2mono_imu = 0;
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 	openxr_eye_tracking_data openxr_eye_tracking_data_;
 #endif
 
@@ -508,7 +508,7 @@ enum psvr2_hmd_input_name
 bool psvr2_usb_xfer_continue(libusb_transfer* xfer, const char* type);
 bool send_psvr2_control(psvr2_hmd* hmd, uint16_t report_id, uint8_t subcmd, uint8_t* pkt_data, uint32_t pkt_len);
 
-#if SUPPORT_EYE_TRACKING
+#if SUPPORT_PSVR2_EYE_TRACKING
 void stop_gaze_keepalive_thread(psvr2_hmd* hmd);
 int psvr2_start_gaze_tracking(psvr2_hmd* hmd);
 #endif
@@ -517,5 +517,5 @@ int psvr2_start_gaze_tracking(psvr2_hmd* hmd);
 xrt_result_t psvr2_get_face_tracking(xrt_device* xdev, enum xrt_input_name facial_expression_type, int64_t at_timestamp_ns, xrt_facial_expression_set* out_value);
 #endif
 
+#endif // PSVR2_STRUCTS_H
 
-#endif
